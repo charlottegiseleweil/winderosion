@@ -1,10 +1,20 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
 ## Pseudo Code for Wind Erosion Model
 ## Written by Charlie Weil & Isita Talukdar, August 2020
 ## Inspired by Huang Binbin's approach.
 
+import numpy as np
+import gdal
+import os
+
 def execute(args):
-	## See typical InVEST Model structure.
-	return None
+    ## See typical InVEST Model structure.
+    return None
 
 # define a class to store raster result
 def RasterSave(data, path, d1):
@@ -28,11 +38,11 @@ def get_elevation_data():
         dem: Elevation data, in meters
     """
 
-    dem = gdal.Open('E:\\sand_P_demo\\dem.tif')
+    dem = gdal.Open('dem.tif')
     return dem
 
 def calculate_air_pressure(dem):
-	"""Calculate air pressure 
+    """Calculate air pressure 
 
     Parameters:
         dem: Elevation data, in meters
@@ -56,7 +66,7 @@ def get_monthly_avg_temp(k):
     """
     
     # monthly average temperature(℃)
-    tem_m_path = 'E:\\sand_P_demo\\month_tem\\' + str(k + 1) + '月气温_Pro.tif'
+    tem_m_path = 'month_tem/' + str(k + 1) + '月气温_Pro.tif'
     tem_m = gdal.Open(tem_m_path)
     tem_m_a = tem_m.ReadAsArray(0, 0, tem_m.RasterXSize, tem_m.RasterYSize)
     # multiply 0.1 because the unit of source data is 0.1 ℃
@@ -73,7 +83,7 @@ def get_monthly_total_precip(k):
         prcp_a: Total Precipitation for a given month, in mm
     """
     # monthly total precipitation(mm)
-    prcp_path = 'E:\\sand_P_demo\\month_prcp\\' + str(k + 1) + '月降水量_Pro.tif'
+    prcp_path = 'month_prcp/' + str(k + 1) + '月降水量_Pro.tif'
     prcp = gdal.Open(prcp_path)
     prcp_a = prcp.ReadAsArray(0, 0, prcp.RasterXSize, prcp.RasterYSize)
     # multiply 0.1 because the unit of source data is 0.1 mm
@@ -91,7 +101,7 @@ def get_monthly_sol_rad(k):
     """
 
     # monthly total solar radiation (MJ/m2)
-    SOL_path = 'E:\\sand_P_demo\\month_SOL\\rad2000' + str(k + 1) + '_grd.tif'
+    SOL_path = 'month_SOL/rad2000' + str(k + 1) + '_grd.tif'
     SOL = gdal.Open(SOL_path)
     SOL_a = SOL.ReadAsArray(0, 0, SOL.RasterXSize, SOL.RasterYSize)
     SOL_a2 = (SOL_a < 0) * 0.1 + (SOL_a >= 0) * SOL_a
@@ -108,14 +118,14 @@ def get_monthly_num_rain_days(k):
     """
 
     # days of rain events in every month
-    prcp_days_path = 'E:\\sand_P_demo\\month_prcp_day\\prcp_day_' + str(k + 1) + '.tif'
+    prcp_days_path = 'month_prcp_day/prcp_day_' + str(k + 1) + '.tif'
     prcp_days = gdal.Open(prcp_days_path)
     prcp_days_a = prcp_days.ReadAsArray(0, 0, prcp_days.RasterXSize, prcp_days.RasterYSize)
     prcp_days_a2 = (prcp_days_a < 0) * 0 + (prcp_days_a >= 0) * prcp_days_a
     return prcp_days_a2
 
 def calculate_evapotranspiration(solar_rad, avg_temp):
-	"""Calculate the potential evapotranspiration for a given month
+    """Calculate the potential evapotranspiration for a given month
 
     Parameters:
         Temperature for a given month, in °C
@@ -129,7 +139,7 @@ def calculate_evapotranspiration(solar_rad, avg_temp):
     return evap_trans
 
 def calculate_soil_moisture(solar_rad, avg_temp, precip, days_precip):
-	"""Calculate the Soil Moisture Factor for a given month
+    """Calculate the Soil Moisture Factor for a given month
 
     Parameters:
         Potential Evapotranspiration for a given month, in millimeters
@@ -144,7 +154,7 @@ def calculate_soil_moisture(solar_rad, avg_temp, precip, days_precip):
     return soil_moisture
 
 def calculate_snow_factor(k):
-	"""Calculate the Snow Factor for a given month
+    """Calculate the Snow Factor for a given month
 
     Parameters:
         Snow Cover, in UNITS
@@ -152,7 +162,7 @@ def calculate_snow_factor(k):
     Returns:
         Snow Factor (SD)
     """
-    SD_path = 'E:\\sand_P_demo\\month_SD\\SD_' + str(k + 1) + '.tif'
+    SD_path = 'month_SD/SD_' + str(k + 1) + '.tif'
     SD = gdal.Open(SD_path)
     SD_a = SD.ReadAsArray(0, 0, SD.RasterXSize, SD.RasterYSize)
     SD_a2 = (SD_a < 0) * 0 + (SD_a >= 0) * SD_a
@@ -160,7 +170,7 @@ def calculate_snow_factor(k):
     return SD_a2
 
 def calculate_air_density(temperature, air_pressure):
-	"""Calculate air density for a given month.
+    """Calculate air density for a given month.
 
     Parameters:
         temperature: Temperature for a given month, in °C
@@ -169,12 +179,12 @@ def calculate_air_density(temperature, air_pressure):
     Returns:
         Air density (rho), in kg/m^3
     """
-	air_density_rho = 1.293 * (273 / (273 + temperature)) * air_pressure / 101.3
+    air_density_rho = 1.293 * (273 / (273 + temperature)) * air_pressure / 101.3
 
     return air_density_rho
 
 def calculate_wind_factor_daily(i):
-	"""Calculate the wind factor for a given day
+    """Calculate the wind factor for a given day
 
     Parameters:
         wind speed for a day, in m/s
@@ -183,7 +193,7 @@ def calculate_wind_factor_daily(i):
         Wind Factor (wf)
     """
      # daily wind speed (m/s)
-    wind_path = 'E:\\sand_P_demo\\month_wind_day\\wind_' + str(i + 1) + '.tif'
+    wind_path = 'month_wind_day/wind_' + str(i + 1) + '.tif'
     wind = gdal.Open(wind_path)
     wind_a = wind.ReadAsArray(0, 0, wind.RasterXSize, wind.RasterYSize)
 
@@ -196,7 +206,7 @@ def calculate_wind_factor_daily(i):
     return wf
 
 def calculate_daily_weather_factor(day_index, air_density_rho, soil_moisture, snow_factor):
-	"""Calculate the Weather Factor for a given day
+    """Calculate the Weather Factor for a given day
 
     Parameters:
         Wind Factor (wf)
@@ -213,7 +223,7 @@ def calculate_daily_weather_factor(day_index, air_density_rho, soil_moisture, sn
     return weather_factor_d
 
 def calculate_monthly_weather_factor(month_index, air_pressure):
-	"""Calculate the Weather Factor for a given month
+    """Calculate the Weather Factor for a given month
 
     Parameters:
         Wind Factor (wf)
@@ -235,8 +245,8 @@ def calculate_monthly_weather_factor(month_index, air_pressure):
     sd = calculate_snow_factor(month_index)
 
     weather_factor_m = 0.0
-    start_date = (k == 0) * 0 + (k > 0) * int(endday[k - 1])
-    end_date = int(endday[k]) + 1
+    start_date = (month_index == 0) * 0 + (month_index > 0) * int(endday[month_index - 1])
+    end_date = int(endday[month_index]) + 1
     #Loop over every day
     for i in range(start_date, end_date):
         weather_factor_d = calculate_daily_weather_factor(i, air_density_rho, sw, sd)
@@ -255,7 +265,7 @@ def get_sand_ratio():
     """
 
     #ratio of sand(%)
-    sand_path = 'E:\\sand_P_demo\\soil\\sand.tif'
+    sand_path = 'soil/sand.tif'
     sand = gdal.Open(sand_path)
     sand_a = sand.ReadAsArray(0, 0, sand.RasterXSize, sand.RasterYSize)
     sand_a2 = (sand_a <= 0) * 0.1 + (sand_a >0) * sand_a
@@ -272,7 +282,7 @@ def get_silt_ratio():
     """
 
     #ratio of silt(%)
-    silt_path = 'E:\\sand_P_demo\\soil\\silt.tif'
+    silt_path = 'soil/silt.tif'
     silt = gdal.Open(silt_path)
     silt_a = silt.ReadAsArray(0, 0, silt.RasterXSize, silt.RasterYSize)
     silt_a2 = (silt_a <= 0) * 0.1 + (silt_a > 0) * silt_a
@@ -288,7 +298,7 @@ def get_org_mat_ratio():
         om_a2: Organic Matter Ratio 
     """
     #ratio of organic matter(%)
-    om_path = 'E:\\sand_P_demo\\soil\\som.tif'
+    om_path = 'soil/som.tif'
     om = gdal.Open(om_path)
     om_a = om.ReadAsArray(0, 0, om.RasterXSize, om.RasterYSize)
     om_a2 = (om_a <= 0) * 0.1 + (om_a > 0) * om_a
@@ -304,14 +314,14 @@ def get_clay_ratio():
         clay_a2: Clay Ratio 
     """
     #ratio of clay(%)
-    clay_path = 'E:\\sand_P_demo\\soil\\clay.tif'
+    clay_path = 'soil/clay.tif'
     clay = gdal.Open(clay_path)
     clay_a = clay.ReadAsArray(0, 0, clay.RasterXSize, clay.RasterYSize)
     clay_a2 = (clay_a <= 0) * 0.1 + (clay_a >0) * clay_a
     return clay_a2
 
 def calculate_soil_crust_factor(clay_ratio, org_mat_ratio):
-	"""Calculate the Soil Crusting Factor
+    """Calculate the Soil Crusting Factor
 
     Parameters:
         Clay Ratio(%)
@@ -325,7 +335,7 @@ def calculate_soil_crust_factor(clay_ratio, org_mat_ratio):
     return soil_crust_factor
 
 def calculate_soil_erodibility_factor(sand_ratio, silt_ratio, clay_ratio, org_mat_ratio):
-	"""Calculate the Soil Erodibility Factor
+    """Calculate the Soil Erodibility Factor
 
     Parameters:
         Sand Ratio(%)
@@ -342,7 +352,7 @@ def calculate_soil_erodibility_factor(sand_ratio, silt_ratio, clay_ratio, org_ma
     return soil_erode_factor
 
 def calculate_vegetation_factor(month_index):
-	"""Calculate the Fraction of Monthly Vegetation Coverage 
+    """Calculate the Fraction of Monthly Vegetation Coverage 
 
     Parameters:
         Fraction of Monthly Vegetation Coverage
@@ -351,27 +361,27 @@ def calculate_vegetation_factor(month_index):
         Vegetation Factor(COG)
     """
     # read fraction of vegetation coverage data (%)
-    fvc_path = 'E:\\sand_P_demo\\FVC2015\\A2015' + str(month_index+1) + '_fc.tif'
+    fvc_path = 'FVC2015/A2015' + str(month_index+1) + '_fc.tif'
     fvc = gdal.Open(fvc_path)
     fvc_a = fvc.ReadAsArray(0, 0, fvc.RasterXSize, fvc.RasterYSize)
     fvc_a2 = ((fvc_a < 0) | (fvc_a > 100)) * 0 + ((fvc_a >= 0) & (fvc_a <= 100)) * fvc_a
     vegetation_factor = np.exp(-0.00483*fvc_a2)
 
-    COG_path = 'E:\\\sand_P_demo\\output\\COG\\COG_' + str(i + 1) + '.tif'
-    RasterSave(COG, COG_path, fvc)
+    COG_path = 'output/COG/COG_' + str(month_index + 1) + '.tif'
+    RasterSave(vegetation_factor, COG_path, fvc)
     
     return vegetation_factor
 
 def calculate_surface_terr_rough():
     # surface roughness factor it can calculated by the smith-Caarson equation
-    KK_path = 'E:\\sand_P_demo\\KK\\KK_1.tif'
+    KK_path = 'KK/KK_1.tif'
     KK = gdal.Open(KK_path)
     KK_a = KK.ReadAsArray(0, 0, KK.RasterXSize, KK.RasterYSize)
     KK_a2 = (KK_a <= 0) * 0.1 + (KK_a > 0) * KK_a
     return KK_a2
 
 def calculate_monthly_wind_erosion(month_index,soil_erode_factor, kprime, soil_crust_factor ):
-	"""Calculate Potential Wind Erosion for a given month
+    """Calculate Potential Wind Erosion for a given month
 
     Parameters:
         Potential RWEQ Maximum Horizontal Flux (Qmax)
@@ -380,12 +390,12 @@ def calculate_monthly_wind_erosion(month_index,soil_erode_factor, kprime, soil_c
     Returns:
          Potential Wind Erosion for a given month (SL)
     """
-    WF_path = 'E:\\sand_P_demo\\output\\WF\\WF_' + str(month_index+ 1) + '.tif'
+    WF_path = 'output/WF/WF_' + str(month_index + 1) + '.tif'
     WF = gdal.Open(WF_path)
     WF_a = WF.ReadAsArray(0, 0, WF.RasterXSize, WF.RasterYSize)
     weather_factor_m = (WF_a <= 0) * 0.1 + (WF_a > 0) * WF_a
 
-    COG_path = 'E:\\sand_P_demo\\output\\COG\\COG_' + str(month_index + 1) + '.tif'
+    COG_path = 'output/COG/COG_' + str(month_index + 1) + '.tif'
     COG = gdal.Open(COG_path)
     COG_a = COG.ReadAsArray(0, 0, COG.RasterXSize, COG.RasterYSize)
     vegetation_factor_m = (COG_a <= 0) * 0.1 + (COG_a > 0) * COG_a
@@ -425,7 +435,7 @@ pressure = calculate_air_pressure(dem)
 #Compute Monthly Weather Factor
 for k in range(0, 12):
     monthly_WF = calculate_monthly_weather_factor(k, pressure)
-    wf_out_path = 'E:\\sand_P_demo\\output\\WF\\wf_' + str(k + 1) + '.tif'
+    wf_out_path = 'output/WF/wf_' + str(k + 1) + '.tif'
     RasterSave(monthly_WF, wf_out_path, dem)
 
 # Step 2 : Soil Crusting Factor and Erodibility Factor
@@ -436,10 +446,11 @@ org_mat_ratio = get_org_mat_ratio()
 clay_ratio = get_clay_ratio()
 
 scf = calculate_soil_crust_factor(clay_ratio,org_mat_ratio)
-RasterSave(scf,'E:\\sand_P_demo\\output\\SCF.tif',dem)
+RasterSave(scf,'output/SCF.tif',dem)
 
 ef = calculate_soil_erodibility_factor(sand_ratio, silt_ratio, clay_ratio, org_mat_ratio)
-RasterSave(ef,'E:\\sand_P_demo\\output\\EF.tif',dem)
+RasterSave(ef,'output/EF.tif',dem)
+
 
 # Step 3 : Vegetation Factor
 # # # # # # # # # # # # #
@@ -454,19 +465,22 @@ kprime = calculate_surface_terr_rough()
 # # # # # # # # # # # # #
 SL_sum = 0.0
 SL_p_sum = 0.0
+
+WF = gdal.Open(wf_out_path)
 for i in range(0, 12):
     wind_erosion_m, wind_erosion_pot_m = calculate_monthly_wind_erosion(i,ef,kprime,scf)
     SL_sum +=  wind_erosion_m
     SL_p_sum += wind_erosion_pot_m
 
-SL_path='E:\\sand_P_demo\\output\\SL.tif'
+SL_path='output/SL.tif'
 RasterSave(SL_sum, SL_path, WF)
 
-SL_p_path='E:\\sand_P_demo\\output\\SL_p.tif'
+SL_p_path='output/SL_p.tif'
 RasterSave(SL_p_sum, SL_p_path, WF)
 
 sand_re = SL_p_sum - SL_sum
 sand_re = (sand_re < 0) * 0 + (sand_re >= 0) * sand_re
 
-out_path = 'E:\\sand_P_demo\\output\\sand_re.tif'
+out_path = 'output/sand_re.tif'
 RasterSave(sand_re, out_path, dem)
+
