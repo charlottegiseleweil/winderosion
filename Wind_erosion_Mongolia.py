@@ -1,16 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[9]:
-
-
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-## Pseudo Code for Wind Erosion Model
+## Wind Erosion Model
 ## Written by Charlie Weil & Isita Talukdar, August 2020
 ## Inspired by Huang Binbin's approach.
 
@@ -18,14 +9,53 @@ import numpy as np
 import gdal
 import os
 
+# - - - - - - - - - - -
+#     File paths
+# - - - - - - - - - - -
+
 data_dir ="data_UTM/"
-input_path = "input/"
-input_path = os.path.join(data_dir, input_path)
+input_data_path = os.path.join(data_dir, 'input/')
+
+dem_filename = 'dem_clipped.tif'
+dem_file_path = os.path.join(input_data_path, dem_filename)
+
+# Climate Input Data
+
+def temperature_file_path(month_num):
+    temperature_filename = 'temperature_degC/' + 'wc2.0_30s_tave_'+ month_num + '.tif'
+    return os.path.join(input_data_path, temperature_filename)
+
+## Isita : do the same thing to define here, upfront, prcp_file_path, sol_file_path. prcp_days_file_path, snow_factor_file_path, wind speed, wf_out
+## Be very clear about what is "filename" and "filepath". Don't overwrite these variables !!
+
+# Soil Input Data
+sand_filename = 'soil/sand.tif'
+sand_file_path = os.path.join(input_data_path, sand_filename)
+
+## Isita: same thing with other soil variables, and variables of steps 4,5,6 : TO DO !!
+## .....
+
+
+
+# - - - - - - - - - - -
+#      Parameters
+# - - - - - - - - - - -
 
 Kr_WINDOW_SIZE = 3
 
+# days of month 1-12
+mondays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+endday = [30, 58, 89, 119, 150, 180, 211, 242, 272, 303, 333, 364]
+month_id = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'] ## Isita, this variable is not used, is it normal?
+
+
+
+# - - - - - - - - - - -
+#    Model functions 
+# - - - - - - - - - - -
+
 def execute(args):
-    ## See typical InVEST Model structure.
+    ## This is where the steps in "Execute" shoulf eventually go.
     return None
 
 # define a class to store raster result
@@ -567,22 +597,15 @@ def calculate_monthly_wind_erosion(weather_factor,soil_erode_factor, kprime, soi
     return wind_erosion, wind_erosionp
 
 
-########### MAIN CODE ###########
+# - - - - - - - - - - -
+#        Execute
+# - - - - - - - - - - -
 # # # # # # # # # # # # # # # # #
-
-# days of month 1-12
-mondays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-
-endday = [30, 58, 89, 119, 150, 180, 211, 242, 272, 303, 333, 364]
-
-m_id = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
 
 # Step 1 : Weather Factor
 # # # # # # # # # # # # #
 
 #get elevation data
-dem_file_path = 'dem_clipped.tif'
-dem_file_path = os.path.join(input_path, dem_file_path)
 dem = get_elevation_data(dem_file_path)
 
 #calculate air pressure
@@ -594,29 +617,28 @@ for k in range(0, 12):
     if k+1 < 10:
         num = '0'+str(k+1)
     
-    temp_file_path = 'temperature_degC/' + 'wc2.0_30s_tave_'+ num + '.tif'
-    temp_file_path = os.path.join(input_path, temp_file_path)
+    temp_file_path = temperature_file_path(num)
     temp = get_monthly_avg_temp(temp_file_path)
     
-    prcp_file_path = 'precipitation_mm/' + 'wc2.0_30s_prec_' + num + '.tif'
-    prcp_file_path = os.path.join(input_path, prcp_file_path)
+    prcp_file_path = 'precipitation_mm/' + 'wc2.0_30s_prec_' + num + '.tif' ## Isita, this path is to be defined, with a function, at the begining of the script in the "File paths" section ! 
+    prcp_file_path = os.path.join(input_data_path, prcp_file_path)
     precip = get_monthly_total_precip(prcp_file_path)
     
-    sol_file_path = 'solar_radiation/'+ 'shortwave_radiation_' + str(k + 1) + '.tif'
-    sol_file_path = os.path.join(input_path, sol_file_path)
+    sol_file_path = 'solar_radiation/'+ 'shortwave_radiation_' + str(k + 1) + '.tif' ## Isita, idem
+    sol_file_path = os.path.join(input_data_path, sol_file_path)
     sol_rad = get_monthly_sol_rad(sol_file_path)
     
-    prcp_days_file_path = 'month_prcp_day/prcp_day_' + str(k + 1) + '.tif'
-    prcp_days_file_path = os.path.join(input_path, prcp_days_file_path)
+    prcp_days_file_path = 'month_prcp_day/prcp_day_' + str(k + 1) + '.tif' ## Isita, idem
+    prcp_days_file_path = os.path.join(input_data_path, prcp_days_file_path)
     precip_days = get_monthly_num_rain_days(prcp_days_file_path)
     
-    snow_factor_file_path = 'snow_gm2/' + 'snow_' + str(k + 1) + '.tif'
-    snow_factor_file_path = os.path.join(input_path, snow_factor_file_path)
+    snow_factor_file_path = 'snow_gm2/' + 'snow_' + str(k + 1) + '.tif' ## Isita, idem
+    snow_factor_file_path = os.path.join(input_data_path, snow_factor_file_path)
     snow_factor = calculate_snow_factor(snow_factor_file_path)
     
     #wind_speed_file_path =  'month_wind_day/wind_'
-    wind_speed_file_path = 'wind_speed_clipped.tif'
-    wind_speed_file_path = os.path.join(input_path, wind_speed_file_path)
+    wind_speed_file_path = 'wind_speed_clipped.tif' ## Isita, idem
+    wind_speed_file_path = os.path.join(input_data_path, wind_speed_file_path)
     monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path,k, temp, precip, sol_rad, precip_days, snow_factor, pressure)
     wf_out_file_path = 'intermediate/WF/wf_' + str(k + 1) + '.tif'
     wf_out_file_path = os.path.join(data_dir, wf_out_file_path)
@@ -624,28 +646,26 @@ for k in range(0, 12):
 
 # Step 2 : Soil Crusting Factor and Erodibility Factor
 # # # # # # # # # # # # #
-sand_file_path = 'soil/sand.tif'
-sand_file_path = os.path.join(input_path, sand_file_path)
 sand_ratio = get_sand_ratio(sand_file_path)
 
 silt_file_path = 'soil/silt.tif'
-silt_file_path = os.path.join(input_path, silt_file_path)
+silt_file_path = os.path.join(input_data_path, silt_file_path) ## Isita: this needs to be up in the "Files name" section, and clean - as I did for sand !
 silt_ratio = get_silt_ratio(silt_file_path)
 
-om_file_path = 'soil/soil_organic_matter_gm2.tif'
-om_file_path = os.path.join(input_path, om_file_path)
+om_file_path = 'soil/soil_organic_matter_gm2.tif' ## Isita: this needs to be up in the "Files name" section, and clean - as I did for sand !
+om_file_path = os.path.join(input_data_path, om_file_path)
 org_mat_ratio = get_org_mat_ratio(om_file_path)
-
-clay_file_path = 'soil/clay.tif'
-clay_file_path = os.path.join(input_path, clay_file_path)
+ 
+clay_file_path = 'soil/clay.tif' ## Isita: this needs to be up in the "Files name" section, and clean - as I did for sand !
+clay_file_path = os.path.join(input_data_path, clay_file_path)
 clay_ratio = get_clay_ratio(clay_file_path)
 
-scf = calculate_soil_crust_factor(clay_ratio,org_mat_ratio)
+scf = calculate_soil_crust_factor(clay_ratio,org_mat_ratio) ## Isita: this needs to be up in the "Files name" section, and clean - as I did for sand !
 scf_out_file_path = 'intermediate/SCF.tif'
 scf_out_file_path = os.path.join(data_dir, scf_out_file_path)
 RasterSave(scf,scf_out_file_path,dem)
 
-ef = calculate_soil_erodibility_factor(sand_ratio, silt_ratio, clay_ratio, org_mat_ratio)
+ef = calculate_soil_erodibility_factor(sand_ratio, silt_ratio, clay_ratio, org_mat_ratio) ## Isita: this needs to be up in the "Files name" section, and clean - as I did for sand !
 ef_out_file_path = 'intermediate/EF.tif'
 ef_out_file_path = os.path.join(data_dir, ef_out_file_path)
 RasterSave(ef,ef_out_file_path,dem)
@@ -655,7 +675,7 @@ RasterSave(ef,ef_out_file_path,dem)
 # # # # # # # # # # # # #
 for i in range(0, 12):
     fvc_file_path = 'vegetation_percent_cover/' + 'vegetation_percent_cover_' + str(i+1) + '.tif'
-    fvc_file_path = os.path.join(input_path, fvc_file_path)
+    fvc_file_path = os.path.join(input_data_path, fvc_file_path)
     monthly_cog = calculate_vegetation_factor(fvc_file_path)
     COG_out_file_path  = 'intermediate/COG/COG_' + str(i + 1) + '.tif'
     COG_out_file_path = os.path.join(data_dir, COG_out_file_path)
