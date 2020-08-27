@@ -10,7 +10,7 @@ import gdal
 import os
 
 # - - - - - - - - - - -
-#     File paths -Test
+#     File paths 
 # - - - - - - - - - - -
 
 data_dir ="data_UTM/"
@@ -24,6 +24,11 @@ dem_file_path = os.path.join(input_data_path, dem_filename)
 def temperature_file_path(month_num):
     temperature_filename = 'temperature_degC/' + 'wc2.0_30s_tave_'+ month_num + '.tif'
     return os.path.join(input_data_path, temperature_filename)
+
+def precipitation_file_path(month_num):
+    precipitation_filename = 'precipitation_mm/' + 'wc2.0_30s_prec_' + month_num + '.tif'
+    return os.path.join(input_data_path, precipitation_filename)
+
 
 ## Isita : do the same thing to define here, upfront, prcp_file_path, sol_file_path. prcp_days_file_path, snow_factor_file_path, wind speed, wf_out
 ## Be very clear about what is "filename" and "filepath". Don't overwrite these variables !!
