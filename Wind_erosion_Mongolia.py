@@ -10,7 +10,7 @@ import gdal
 import os
 
 # - - - - - - - - - - -
-#     File paths
+#     File paths -Test
 # - - - - - - - - - - -
 
 data_dir ="data_UTM/"
