@@ -43,8 +43,8 @@ def snow_cover_file_path(month_num):
     snow_cover_filename = 'snow_gm2/' + 'snow_' + month_num + '.tif'
     return os.path.join(input_data_path, snow_cover_filename)
 
-def wind_spd_file_path():
-    wind_speed_filename = 'wind_speed_clipped.tif'
+def wind_spd_file_path(month_num):
+    wind_speed_filename = 'wind_speed_monthly_clipped/' + 'wind_speed_' + num + '.tif'
     return os.path.join(input_data_path, wind_speed_filename)
 
 def wf_out_file_path(month_num):
@@ -702,8 +702,7 @@ for k in range(0, 12):
     snow_factor_file_path = snow_cover_file_path(str(k + 1)) 
     snow_factor = calculate_snow_factor(snow_factor_file_path)
     
-    #wind_speed_file_path =  'month_wind_day/wind_'
-    wind_speed_file_path = wind_spd_file_path() 
+    wind_speed_file_path = wind_spd_file_path(month_num) 
 
     monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path,k, temp, precip, sol_rad, precip_days, snow_factor, pressure)
     wf_out_file_path =  wf_out_file_path(str(k + 1))
