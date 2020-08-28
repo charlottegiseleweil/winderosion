@@ -43,7 +43,7 @@ def snow_cover_file_path(month_num):
     snow_cover_filename = 'snow_gm2/' + 'snow_' + month_num + '.tif'
     return os.path.join(input_data_path, snow_cover_filename)
 
-def wind_spd_file_path(month_num):
+def wind_spd_file_path():
     wind_speed_filename = 'wind_speed_clipped.tif'
     return os.path.join(input_data_path, wind_speed_filename)
 
