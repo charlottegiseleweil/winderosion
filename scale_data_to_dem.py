@@ -55,7 +55,7 @@ dem_out_path = os.path.join(utm_dir, dem_file_path)
 gdal.Warp(dem_out_path, dem_in_file, srcSRS='EPSG:4326', dstSRS='EPSG:32648')
 
 ##Average Number of Rain Days per Month
-rain_days = [0,1,1,2,3,10,11,14,5,2,1,2]
+rain_days = [0,0,0,0,0,1,3,3,1,0,0,0]
 
 for k in range(0, 12):
     num = str(k+1)
