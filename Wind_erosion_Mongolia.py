@@ -201,9 +201,9 @@ def get_monthly_avg_temp(file_path):
     """
     
     # monthly average temperature(℃)
-    tem_m_a = read_raster_as_array(file_path)
-    tem_m_a2 = (tem_m_a < -100) * 0.1 + (tem_m_a >= -100) * tem_m_a
-    return tem_m_a2
+    tem_m = read_raster_as_array(file_path)
+    tem_m = (tem_m < -100) * 0.1 + (tem_m >= -100) * tem_m
+    return tem_m
 
 def get_monthly_total_precip(file_path):
     """Get Total Precipitation for a given month from Raster File
@@ -214,9 +214,9 @@ def get_monthly_total_precip(file_path):
         GDAL array 
     """
     # monthly total precipitation(mm)
-    prcp_a = read_raster_as_array(file_path)
-    prcp_a2 = (prcp_a < 0) * 0 + (prcp_a >= 0) * prcp_a
-    return prcp_a
+    prcp = read_raster_as_array(file_path)
+    prcp = (prcp < 0) * 0 + (prcp >= 0) * prcp
+    return prcp
 
 def get_monthly_sol_rad(file_path):
     """Get Total Solar Radiation for a given month from Raster File
@@ -228,9 +228,9 @@ def get_monthly_sol_rad(file_path):
     """
 
     # monthly total solar radiation (MJ/m2)
-    SOL_a = read_raster_as_array(file_path)
-    SOL_a2 = (SOL_a < 0) * 0.1 + (SOL_a >= 0) * SOL_a
-    return SOL_a2
+    SOL = read_raster_as_array(file_path)
+    SOL = (SOL < 0) * 0.1 + (SOL >= 0) * SOL
+    return SOL
 
 def get_monthly_num_rain_days(file_path):
     """Get Number of Rain Days for a given month from Raster File
@@ -242,9 +242,9 @@ def get_monthly_num_rain_days(file_path):
     """
 
     # days of rain events in every month
-    prcp_days_a = read_raster_as_array(file_path)
-    prcp_days_a2 = (prcp_days_a < 0) * 0 + (prcp_days_a >= 0) * prcp_days_a
-    return prcp_days_a2
+    prcp_days = read_raster_as_array(file_path)
+    prcp_days = (prcp_days < 0) * 0 + (prcp_days >= 0) * prcp_days
+    return prcp_days
 
 def calculate_evapotranspiration(solar_rad, avg_temp):
     """Calculate the potential evapotranspiration for a given month
@@ -291,10 +291,10 @@ def calculate_snow_factor(file_path):
         GDAL array
     """
 
-    SD_a = read_raster_as_array(file_path)
-    SD_a2 = (SD_a < 0) * 0 + (SD_a >= 0) * SD_a
-    SD_a2 = (1 - SD_a2 * 0.01)
-    return SD_a2
+    SD = read_raster_as_array(file_path)
+    SD = (SD < 0) * 0 + (SD >= 0) * SD
+    SD = (1 - SD * 0.01)
+    return SD
 
 def calculate_air_density(temperature, air_pressure):
     """Calculate air density for a given month.
@@ -321,12 +321,12 @@ def calculate_wind_factor_monthly(file_path):
         GDAL array
     """
      # daily wind speed (m/s)
-    wind_a = read_raster_as_array(file_path)
+    wind_speed = read_raster_as_array(file_path)
     # multiply 0.1 because the unit of source data is 0.1 m/s CHECK THIS
-    wind_a2 = (wind_a < 50) * 0 + ((wind_a >= 50) & (wind_a < 2000)) * wind_a * 0.1 + (wind_a >= 2000) * 200
+    wind_speed = (wind_speed < 50) * 0 + ((wind_speed >= 50) & (wind_speed < 2000)) * wind_speed * 0.1 + (wind_speed >= 2000) * 200
 
     # wind factor
-    wf = wind_a2 * (wind_a2 - 5) ** 2
+    wf = wind_speed * (wind_speed - 5) ** 2
     
     return wf
 
@@ -390,7 +390,7 @@ def calculate_soil_crust_factor(clay_ratio, org_mat_ratio):
         Soil Crusting Factor (SCF)
         GDAL array
     """
-    soil_crust_factor = 1 / (1 + 0.0066 * clay_ratio ** 2 + 0.021 * org_mat_ratio ** 2) #probably just do ^ ya know...
+    soil_crust_factor = 1 / (1 + 0.0066 * clay_ratio ** 2 + 0.021 * org_mat_ratio ** 2)
 
     return soil_crust_factor
 
@@ -568,7 +568,7 @@ def read_Kprime(file_path):
         GDAL array 
     """
     #reads the output TIF into an array
-    KK = read_raster_as_array(file_path)  ##### _a is array and _a2 is processing JUST TAKE IT OUT IT"S CLEAR ENOUGH and don't take two vars just overwrite one
+    KK = read_raster_as_array(file_path)
     return KK
 
 
@@ -634,18 +634,11 @@ for month_id in range(0, 12):
     snow_factor_file_path = snow_cover_file_path(str(month_id + 1)) 
     snow_factor = calculate_snow_factor(snow_factor_file_path)
     
-<<<<<<< HEAD
     wind_speed_file_path = wind_spd_file_path(mont_id_str) 
 
     monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path,k, temp, precip, sol_rad, precip_days, snow_factor, pressure)
     wf_out_file_path =  wind_factor_out_file_path(str(month_id + 1))
-=======
     wind_speed_file_path = wind_spd_file_path(num) 
-
-    monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path,k, temp, precip, sol_rad, precip_days, snow_factor, pressure)
-    wf_out_file_path =  wind_factor_out_file_path(str(k + 1))
->>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb
-    RasterSave(monthly_WF, wf_out_file_path, dem)
 
 # Step 2 : Soil Crusting Factor and Erodibility Factor 
 # # # # # # # # # # # # #
@@ -665,15 +658,9 @@ RasterSave(ef,ef_file_path,dem)
 
 
 # Step 3 : Vegetation Factor and Step 4 : Surface Terrain Roughness Factor
-<<<<<<< HEAD
 # # # # # # # # # # # # #
 for month_id in range(0, 12):
     fvc_file_path = frac_veg_cov_file_path(str(month_id+1))
-=======
-# # # # # # # # # # # # #
-for i in range(0, 12):
-    fvc_file_path = frac_veg_cov_file_path(str(i+1))
->>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb
 
     monthly_cog = calculate_vegetation_factor(fvc_file_path)
     COG_out_file_path  = cog_out_file_path(str(month_id+1))
@@ -692,13 +679,8 @@ SL_sum = 0.0
 SL_wo_veg_sum = 0.0
 
 
-<<<<<<< HEAD
 for month_id in range(0, 12):
     wf_file_path = wind_factor_out_file_path(str(month_id + 1))
-=======
-for i in range(0, 12):
-    wf_file_path = wind_factor_out_file_path(str(i + 1))
->>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb
     wf = read_WF(wf_file_path)
     
     cog_file_path = cog_out_file_path(str(month_id+1))
@@ -715,21 +697,11 @@ WF_format = gdal.Open(wf_file_path)
 SL_out_file_path = sl_actual_out_file_path() 
 RasterSave(SL_sum, SL_out_file_path, WF_format)
 
-<<<<<<< HEAD
 SL_without_veg_out_file_path = sl_wo_veg_out_file_path()
 RasterSave(SL_wo_veg_sum, SL_without_veg_out_file_path, WF_format)
-=======
-SL_p_out_file_path = sl_wo_veg_out_file_path()
-RasterSave(SL_p_sum, SL_p_out_file_path, WF_format)
->>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb
 
 sand_re = SL_wo_veg_sum - SL_sum
 sand_re = (sand_re < 0) * 0 + (sand_re >= 0) * sand_re
 
 sand_re_out_file_path = sand_r_out_file_path()
-<<<<<<< HEAD
 RasterSave(sand_re, sand_re_out_file_path, dem)
-=======
-RasterSave(sand_re, sand_re_out_file_path, dem)
-
->>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb
