@@ -634,10 +634,17 @@ for month_id in range(0, 12):
     snow_factor_file_path = snow_cover_file_path(str(month_id + 1)) 
     snow_factor = calculate_snow_factor(snow_factor_file_path)
     
+<<<<<<< HEAD
     wind_speed_file_path = wind_spd_file_path(mont_id_str) 
 
     monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path,k, temp, precip, sol_rad, precip_days, snow_factor, pressure)
     wf_out_file_path =  wind_factor_out_file_path(str(month_id + 1))
+=======
+    wind_speed_file_path = wind_spd_file_path(num) 
+
+    monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path,k, temp, precip, sol_rad, precip_days, snow_factor, pressure)
+    wf_out_file_path =  wind_factor_out_file_path(str(k + 1))
+>>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb
     RasterSave(monthly_WF, wf_out_file_path, dem)
 
 # Step 2 : Soil Crusting Factor and Erodibility Factor 
@@ -658,9 +665,15 @@ RasterSave(ef,ef_file_path,dem)
 
 
 # Step 3 : Vegetation Factor and Step 4 : Surface Terrain Roughness Factor
+<<<<<<< HEAD
 # # # # # # # # # # # # #
 for month_id in range(0, 12):
     fvc_file_path = frac_veg_cov_file_path(str(month_id+1))
+=======
+# # # # # # # # # # # # #
+for i in range(0, 12):
+    fvc_file_path = frac_veg_cov_file_path(str(i+1))
+>>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb
 
     monthly_cog = calculate_vegetation_factor(fvc_file_path)
     COG_out_file_path  = cog_out_file_path(str(month_id+1))
@@ -679,8 +692,13 @@ SL_sum = 0.0
 SL_wo_veg_sum = 0.0
 
 
+<<<<<<< HEAD
 for month_id in range(0, 12):
     wf_file_path = wind_factor_out_file_path(str(month_id + 1))
+=======
+for i in range(0, 12):
+    wf_file_path = wind_factor_out_file_path(str(i + 1))
+>>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb
     wf = read_WF(wf_file_path)
     
     cog_file_path = cog_out_file_path(str(month_id+1))
@@ -697,11 +715,21 @@ WF_format = gdal.Open(wf_file_path)
 SL_out_file_path = sl_actual_out_file_path() 
 RasterSave(SL_sum, SL_out_file_path, WF_format)
 
+<<<<<<< HEAD
 SL_without_veg_out_file_path = sl_wo_veg_out_file_path()
 RasterSave(SL_wo_veg_sum, SL_without_veg_out_file_path, WF_format)
+=======
+SL_p_out_file_path = sl_wo_veg_out_file_path()
+RasterSave(SL_p_sum, SL_p_out_file_path, WF_format)
+>>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb
 
 sand_re = SL_wo_veg_sum - SL_sum
 sand_re = (sand_re < 0) * 0 + (sand_re >= 0) * sand_re
 
 sand_re_out_file_path = sand_r_out_file_path()
+<<<<<<< HEAD
 RasterSave(sand_re, sand_re_out_file_path, dem)
+=======
+RasterSave(sand_re, sand_re_out_file_path, dem)
+
+>>>>>>> ea91014ca6cf39d8aabb3eb4afa40bc2100944cb

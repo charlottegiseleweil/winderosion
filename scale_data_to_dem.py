@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[53]:
-
 
 from osgeo import gdal, gdalconst
 import numpy as np
@@ -27,7 +25,7 @@ def scaleToDEM(inputfile_path , outputfilepath):
     inputProj = inp.GetProjection()
     inputTrans = inp.GetGeoTransform()
 
-    referencefile = 'data_UTM/dem_clipped.tif'
+    referencefile = 'data/dem_clipped.tif'
     reference = gdal.Open(referencefile, gdalconst.GA_ReadOnly)
     referenceProj = reference.GetProjection()
     referenceTrans = reference.GetGeoTransform()
@@ -49,10 +47,10 @@ def scaleToDEM(inputfile_path , outputfilepath):
 #####Resize all files to DEM file resolution and size #####
 data_dir  = 'data/'
 out_dir = 'data_scaled/'
-utm_dir = 'data_UTM/'
+utm_dir = 'data_UTM/input/'
 
 dem_file_path = 'dem_clipped.tif'
-dem_in_file = os.path.join(out_dir, dem_file_path)
+dem_in_file = os.path.join(data_dir, dem_file_path)
 dem_out_path = os.path.join(utm_dir, dem_file_path)
 gdal.Warp(dem_out_path, dem_in_file, srcSRS='EPSG:4326', dstSRS='EPSG:32648')
 
@@ -88,7 +86,7 @@ for k in range(0, 12):
 
 
     ###TEMP PRCP DAYS
-    raster = gdal.Open('data_UTM/dem_clipped.tif')
+    raster = gdal.Open('data_UTM/input/dem_clipped.tif')
     array = raster.ReadAsArray(0, 0, raster.RasterXSize, raster.RasterYSize)
     prcp_temp = (array < 0) * 0 + (array >= 0) * 23
     prcp_temp = np.tile(23, (raster.RasterYSize, raster.RasterXSize))
@@ -103,9 +101,6 @@ for k in range(0, 12):
     snow_factor_out_path = os.path.join(utm_dir, snow_factor_file_path)
     gdal.Warp(snow_factor_out_path, scaled_snow, srcSRS='EPSG:4326', dstSRS='EPSG:32648')
     
-   #wind_speed_file_path =  'month_wind_day/wind_'
-   #monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path,k, temp, precip, sol_rad, precip_days, snow_factor, pressure)
-    
     fvc_file_path = 'vegetation_percent_cover/' + 'vegetation_percent_cover_' + str(k+1) + '.tif'
     fvc_in_path = os.path.join(data_dir, fvc_file_path)
     scaled_fvc = os.path.join(out_dir, fvc_file_path)
@@ -113,12 +108,12 @@ for k in range(0, 12):
     fvc_out_path = os.path.join(utm_dir, fvc_file_path)
     gdal.Warp(fvc_out_path, scaled_fvc, srcSRS='EPSG:4326', dstSRS='EPSG:32648')
 
-wind_spd_file_path = 'wind_speed_clipped.tif'
-wind_spd_in_path = os.path.join(data_dir, wind_spd_file_path)
-scaled_wind_spd = os.path.join(out_dir, wind_spd_file_path)
-scaleToDEM(wind_spd_in_path, scaled_wind_spd)
-wind_spd_out_path = os.path.join(utm_dir, wind_spd_file_path)
-gdal.Warp(wind_spd_out_path, scaled_wind_spd, srcSRS='EPSG:4326', dstSRS='EPSG:32648')
+    wind_spd_file_path = 'wind_speed_monthly_clipped/' + 'wind_speed_' + num + '.tif'
+    wind_spd_in_path = os.path.join(data_dir, wind_spd_file_path)
+    scaled_wind_spd = os.path.join(out_dir, wind_spd_file_path)
+    scaleToDEM(wind_spd_in_path, scaled_wind_spd)
+    wind_spd_out_path = os.path.join(utm_dir, wind_spd_file_path)
+    gdal.Warp(wind_spd_out_path, scaled_wind_spd, srcSRS='EPSG:4326', dstSRS='EPSG:32648')
 
 sand_file_path = 'soil/sand.tif'
 sand_in_path = os.path.join(data_dir, sand_file_path)
@@ -149,10 +144,3 @@ scaled_clay = os.path.join(out_dir, clay_file_path)
 scaleToDEM(clay_in_path, scaled_clay)
 clay_out_path = os.path.join(utm_dir, clay_file_path)
 gdal.Warp(clay_out_path, scaled_clay, srcSRS='EPSG:4326', dstSRS='EPSG:32648')
-
-
-# In[ ]:
-
-
-
-
