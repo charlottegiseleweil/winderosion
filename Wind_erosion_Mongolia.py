@@ -3,15 +3,15 @@
 
 ## Wind Erosion Model
 ## Written by Charlie Weil & Isita Talukdar, August 2020
-## Inspired by Huang Binbin's approach.
+## Inspired by Huang Binbin's approach.
 
 import numpy as np
 import gdal
 import os
 
-# - - - - - - - - - - -
+# - - - - - - - - - - -
 #     File paths 
-# - - - - - - - - - - -
+# - - - - - - - - - - -
 
 data_dir ="data_UTM/"
 input_data_path = os.path.join(data_dir, 'input/')
@@ -43,18 +43,13 @@ def snow_cover_file_path(month_num):
     snow_cover_filename = 'snow_gm2/' + 'snow_' + month_num + '.tif'
     return os.path.join(input_data_path, snow_cover_filename)
 
-def wind_spd_file_path():
-    wind_speed_filename = 'wind_speed_clipped.tif'
+def wind_spd_file_path(month_num):
+    wind_speed_filename = 'wind_speed_monthly_clipped/' + 'wind_speed_' + num + '.tif'
     return os.path.join(input_data_path, wind_speed_filename)
 
-def wf_out_file_path(month_num):
+def wind_factor_out_file_path(month_num):
     wf_out_filename = 'WF/wf_' + month_num + '.tif'
     return os.path.join(intermediate_data_path, wf_out_filename)
-
-## DONE ##
-## Isita : do the same thing to define here, upfront, prcp_file_path, sol_file_path. prcp_days_file_path, snow_factor_file_path, wind speed, wf_out
-## Be very clear about what is "filename" and "filepath". Don't overwrite these variables !!
-## DONE ##
 
 # Soil Input Data
 sand_filename = 'soil/sand.tif'
@@ -88,12 +83,7 @@ def kk_out_file_path(month_num):
     kk_out_filename = 'KK/KK_' + month_num + '.tif'
     return os.path.join(intermediate_data_path, kk_out_filename)
 
-#Actual and Predicted Wind Erosion
-
-
-## DONE ##
-## Isita: same thing with other soil variables, and variables of steps 4,5,6 : TO DO !!
-## DONE ##
+#Actual and Predicted Wind Erosion Output Paths
 
 def sl_actual_out_file_path():
     sl_actual_out_filename = 'SL_actual.tif'
@@ -107,29 +97,38 @@ def sand_r_out_file_path():
     sand_re_out_filename = 'sand_re.tif'
     return os.path.join(output_data_path, sand_re_out_filename)
 
-# - - - - - - - - - - -
+# - - - - - - - - - - -
 #      Parameters
-# - - - - - - - - - - -
+# - - - - - - - - - - -
 
 Kr_WINDOW_SIZE = 3
 
 # days of month 1-12
 mondays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 endday = [30, 58, 89, 119, 150, 180, 211, 242, 272, 303, 333, 364]
-month_id = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'] ## Isita, this variable is not used, is it normal?
+#month_id = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'] ## Isita, this variable is not used, is it normal?
 
 
 
-# - - - - - - - - - - -
-#    Model functions 
-# - - - - - - - - - - -
+# - - - - - - - - - - -
+#    Model functions 
+# - - - - - - - - - - -
 
 def execute(args):
     ## This is where the steps in "Execute" shoulf eventually go.
     return None
 
-# define a class to store raster result
 def RasterSave(data, path, d1):
+    """Save Data to Raster File
+    Parameters:
+        data: array
+        path: path where new Raster should be saved
+        d1: GDAl dataset used to set dimensions of new raster
+        
+    Returns:
+        dem: Elevation data, in meters
+        GDAL Dataset
+    """
     driver = gdal.GetDriverByName('GTiff')
     water_r_path = path
     ds = driver.Create(water_r_path, d1.RasterXSize, d1.RasterYSize, 1, gdal.GDT_Float32)
@@ -141,6 +140,13 @@ def RasterSave(data, path, d1):
     del ds
     
 def read_raster_as_array(file_path):
+    """Read Raster Data to an array
+    Parameters:
+        file_path: path where source Raster is found
+        
+    Returns:
+        GDAL array: raster data as an array
+    """
     raster = gdal.Open(file_path)
     array = raster.ReadAsArray(0, 0, raster.RasterXSize, raster.RasterYSize)
     return array
@@ -148,9 +154,7 @@ def read_raster_as_array(file_path):
 def get_elevation_data(file_path):
     """Get Elevation Data from Raster File
     Parameters:
-        file_path: name of Raster file 
-        Raster File: 1 pixel = 5532m
-        
+        file_path: path of Raster file with Elevation Data
     Returns:
         dem: Elevation data, in meters
         GDAL Dataset
@@ -160,21 +164,28 @@ def get_elevation_data(file_path):
     return dem
 
 def read_dem_as_array(dem):
+     """Get Elevation Data from Raster File
+    Parameters:
+        dem: Elevation data, in meters
+        GDAL Dataset
+    Returns:
+        dem: Elevation data, in meters
+        GDAL array 
+    """
     dem_a = dem.ReadAsArray(0, 0, dem.RasterXSize, dem.RasterYSize)
-    #Selct only the first band
+    #Select only the first band 
     dem_a = dem_a[0,:,:]
     dem_a2 = (dem_a < 0) * 0 + (dem_a >= 0) * dem_a
     return dem_a2
 
 def calculate_air_pressure(dem):
     """Calculate air pressure
-
     Parameters:
         dem: Elevation data, in meters
         GDAL Dataset
     Returns:
         Air Pressure (P), in kPa
-        stored in array 
+        GDAL array
     """
     dem_a2 = read_dem_as_array(dem)
     air_pressure = 101.3 * (1 - 0.0255 * dem_a2 / 1000 * (6357 / (6357 + dem_a2 / 1000))) ** 5.256
@@ -182,47 +193,38 @@ def calculate_air_pressure(dem):
 
 def get_monthly_avg_temp(file_path):
     """Get Average Temperature for a given month from Raster File
-
     Parameters:
-        file_path: name of Raster file with average temperature
-        Raster File: 1 pixel = 5532m
+        file_path: path to Raster file with average temperature
     Returns:
         tem_m_a2: Temperature for a given month, in °C
-        stored in array 
+        GDAL array 
     """
     
     # monthly average temperature(℃)
     tem_m_a = read_raster_as_array(file_path)
-    # multiply 0.1 because the unit of source data is 0.1 ℃
     tem_m_a2 = (tem_m_a < -100) * 0.1 + (tem_m_a >= -100) * tem_m_a
     return tem_m_a2
 
 def get_monthly_total_precip(file_path):
     """Get Total Precipitation for a given month from Raster File
-
     Parameters:
-        file_path: name of Raster file with total precipitation
-        Raster File: 1 pixel = 5532m
-
+        file_path: path to Raster file with total precipitation
     Returns:
         prcp_a: Total Precipitation for a given month, in mm
-        stored in array 
+        GDAL array 
     """
     # monthly total precipitation(mm)
     prcp_a = read_raster_as_array(file_path)
-    # multiply 0.1 because the unit of source data is 0.1 mm
     prcp_a2 = (prcp_a < 0) * 0 + (prcp_a >= 0) * prcp_a
     return prcp_a
 
 def get_monthly_sol_rad(file_path):
     """Get Total Solar Radiation for a given month from Raster File
-
     Parameters:
-        file_path: name of Raster file with total solar radiation
-        Raster File: 1 pixel = 5532m
+        file_path: path to Raster file with total solar radiation
     Returns:
         SOL_a2: Total Solar Radiation for a given month, in MJ/m2
-        stored in array 
+        GDAL array 
     """
 
     # monthly total solar radiation (MJ/m2)
@@ -232,13 +234,11 @@ def get_monthly_sol_rad(file_path):
 
 def get_monthly_num_rain_days(file_path):
     """Get Number of Rain Days for a given month from Raster File
-
     Parameters:
-        file_path: name of Raster file with number of rain days
-        Raster File: 1 pixel = 5532m
+        file_path: path to Raster file with number of rain days
     Returns:
         prcp_days_a2: Total Number of Rain Days for a given month, in days
-        stored in array 
+        GDAL array 
     """
 
     # days of rain events in every month
@@ -248,17 +248,16 @@ def get_monthly_num_rain_days(file_path):
 
 def calculate_evapotranspiration(solar_rad, avg_temp):
     """Calculate the potential evapotranspiration for a given month
-
     Parameters:
         Temperature for a given month, in °C
-        array from Raster file
+        GDAL array
         
         Total Solar Radiation for a given month, in Megajoules/meters squared
-        array from Raster file
+        GDAL array
         
     Returns:
         Potential Evapotranspiration (ETp), in millimeters
-        stored in array 
+        GDAL array
     """
     evap_trans = 0.0135 * (solar_rad / 2.54) * (avg_temp + 17.8)
     
@@ -266,16 +265,16 @@ def calculate_evapotranspiration(solar_rad, avg_temp):
 
 def calculate_soil_moisture(solar_rad, avg_temp, precip, days_precip):
     """Calculate the Soil Moisture Factor for a given month
-
     Parameters:
         Potential Evapotranspiration for a given month, in millimeters
-        array generated by function
+        GDAL array
         
         Number of Rain days for a given month
-        array from Raster file
+        GDAL array
         
     Returns:
         Soil Moisture Factor (SW)
+        GDAL array
     """
     evap_trans = calculate_evapotranspiration(solar_rad, avg_temp)
     soil_moisture = (evap_trans - precip * days_precip) / evap_trans
@@ -285,13 +284,11 @@ def calculate_soil_moisture(solar_rad, avg_temp, precip, days_precip):
 
 def calculate_snow_factor(file_path):
     """Calculate the Snow Factor for a given month
-
     Parameters:
-        file_path: name of Raster file with Snow cover
-        Raster File: 1 pixel = 5532m
+        file_path: path to Raster file with Snow cover, 
     Returns:
-        Snow Factor (SD)
-        stored in array
+        Snow Factor (SD),
+        GDAL array
     """
 
     SD_a = read_raster_as_array(file_path)
@@ -301,35 +298,31 @@ def calculate_snow_factor(file_path):
 
 def calculate_air_density(temperature, air_pressure):
     """Calculate air density for a given month.
-
     Parameters:
         temperature: Temperature for a given month, in °C
-        array from Raster file
+        GDAL array
         
         air_pressure: Air Pressure, in kPa
-        array from Raster file
-
+        GDAL array
     Returns:
         Air density (rho), in kg/m^3
-        stored in array
+        GDAL array
     """
     air_density_rho = 1.293 * (273 / (273 + temperature)) * air_pressure / 101.3
     return air_density_rho
 
-def calculate_wind_factor_daily(file_path):
-    """Calculate the wind factor for a given day
-
+def calculate_wind_factor_monthly(file_path):
+    """Calculate the wind factor for a given month
     Parameters:
-        file_path: name of Raster file with wind speed
-        Raster File: 1 pixel = 5532m
+        file_path: path to Raster file with monthly wind speed
         
     Returns:
         Wind Factor (wf)
-        stored in array
+        GDAL array
     """
      # daily wind speed (m/s)
     wind_a = read_raster_as_array(file_path)
-    # multiply 0.1 because the unit of source data is 0.1 m/s
+    # multiply 0.1 because the unit of source data is 0.1 m/s CHECK THIS
     wind_a2 = (wind_a < 50) * 0 + ((wind_a >= 50) & (wind_a < 2000)) * wind_a * 0.1 + (wind_a >= 2000) * 200
 
     # wind factor
@@ -337,209 +330,134 @@ def calculate_wind_factor_daily(file_path):
     
     return wf
 
-def calculate_daily_weather_factor(wind_factor_d, air_density_rho, soil_moisture, snow_factor):
-    """Calculate the Weather Factor for a given day 
-
-    Parameters:
-        Wind Factor (wf)
-        array from function
-        
-        Air density (rho), in kg/m^3
-        array from function
-        
-        Soil Moisture Factor (SW)
-        array from function
-        
-        Snow Factor (SD)
-        array from Raster file
-        
-    Returns:
-        Weather Factor for a given day
-        stored in array
-    """
-    weather_factor_d = wind_factor_d * air_density_rho / 9.8 * soil_moisture * snow_factor
-    return weather_factor_d
-
-def calculate_monthly_weather_factor(wind_file_names_prefix, month_index, temp, precip, sol_rad, precip_days, snow_factor, pressure):
+def calculate_monthly_weather_factor(wind_file_path, temp, precip, sol_rad, precip_days, snow_factor, pressure):
     """Calculate the Weather Factor for a given month
-
     Parameters:
         Wind Factor (wf)
-        array from function
+        GDAL array
         
         Air density (rho), in kg/m^3
-        array from function
+        GDAL array
         
         Soil Moisture Factor (SW)
-        array from function
+        GDAL array
         
         Snow Factor (SD)
-        array from Raster file
+        GDAL array
         
     Returns:
         Weather Factor for a given month (WF)
-        stored in array
+        GDAL array
     """
    
-    sw = calculate_soil_moisture(sol_rad, temp, precip, precip_days)
+    wind_factor =  calculate_wind_factor_monthly(wind_file_path)
 
     air_density_rho = calculate_air_density(temp, pressure)
     
-   
-    weather_factor_m = 0.0
-    #start_date = (month_index == 0) * 0 + (month_index > 0) * int(endday[month_index - 1])
-    start_date = 0 if (month_index == 0) else int(endday[month_index - 1])
-    end_date = int(endday[month_index]) + 1
-    #Loop over every day
-    for i in range(start_date, end_date):
-        #wind_file_path = wind_file_names_prefix + str(i + 1) + '.tif'
-        wind_file_path = wind_file_names_prefix
-        wind_factor_d =  calculate_wind_factor_daily(wind_file_path)
-        weather_factor_d = calculate_daily_weather_factor(wind_factor_d, air_density_rho, sw, snow_factor)
-        #print(i, " : ",np.sum(snow_factor))
-        weather_factor_m = weather_factor_m + weather_factor_d
+    sw = calculate_soil_moisture(sol_rad, temp, precip, precip_days)
+
+    weather_factor = wind_factor * air_density_rho / 9.8 * soil_moisture * snow_factor
         
-    return weather_factor_m
+    return weather_factor
 
-def get_sand_ratio(file_path):
-    """Get Sand Ratio from Raster File
-
+def preprocess_soil_nonneg(file_path):
+    """Get Soil Data(ratio of: sand, silt, clay, org matter) from Raster File and preprocess for non-negative values
     Parameters:
-        file_path: name of Raster file with sand ratio
-        Raster File: 1 pixel = 5532m
+        file_path: path to Raster file with soil ratio
         
     Returns:
-        sand_a2: Sand Ratio
-        stored in array
+        soil_ratio : soil data preprocessesd
+        GDAL array
     """
 
-    #ratio of sand(%)
-    sand_a = read_raster_as_array(file_path)
-    sand_a2 = (sand_a <= 0) * 0.1 + (sand_a >0) * sand_a
-    return sand_a2
+    #ratio of soil data(%)
+    soil_ratio = read_raster_as_array(file_path)
+    soil_ratio = (soil_ratio <= 0) * 0.1 + (soil_ratio >0) * soil_ratio
+    return soil_ratio
 
-def get_silt_ratio(file_path):
-    """Get Silt Ratio from Raster File
 
-    Parameters:
-        file_path: name of Raster file with silt ratio
-        Raster File: 1 pixel = 5532m
-    Returns:
-        silt_a2: Silt Ratio
-        stored in array
-    """
-
-    #ratio of silt(%)
-    silt_a = read_raster_as_array(file_path)
-    silt_a2 = (silt_a <= 0) * 0.1 + (silt_a > 0) * silt_a
-    return silt_a2
-
-def get_org_mat_ratio(file_path):
-    """Get Organic Matter Ratio from Raster File
-
-    Parameters:
-        file_path: name of Raster file with organic matter ratio
-        Raster File: 1 pixel = 5532m
-
-    Returns:
-        om_a2: Organic Matter Ratio
-        stored in array
-    """
-    #ratio of organic matter(%)
-    om_a = read_raster_as_array(file_path)
-    om_a2 = (om_a <= 0) * 0.1 + (om_a > 0) * om_a
-    return om_a2
-
-def get_clay_ratio(file_path):
-    """Get Clay Ratio from Raster File
-
-    Parameters:
-        file_path: name of Raster file with clay ratio
-        Raster File: 1 pixel = 5532m
-        
-    Returns:
-        clay_a2: Clay Ratio
-        stored in array
-    """
-    #ratio of clay(%)
-    clay_a = read_raster_as_array(file_path)
-    clay_a2 = (clay_a <= 0) * 0.1 + (clay_a >0) * clay_a
-    return clay_a2
 
 def calculate_soil_crust_factor(clay_ratio, org_mat_ratio):
     """Calculate the Soil Crusting Factor
-
     Parameters:
         Clay Ratio(%)
-        array from function
+        GDAL array
         
         Organic Matter Ratio(%)
-        array from function
+        GDAL array
         
     Returns:
         Soil Crusting Factor (SCF)
-        stored in array
+        GDAL array
     """
-    soil_crust_factor = SCF = 1 / (1 + 0.0066 * clay_ratio ** 2 + 0.021 * org_mat_ratio ** 2)
+    soil_crust_factor = 1 / (1 + 0.0066 * clay_ratio ** 2 + 0.021 * org_mat_ratio ** 2) #probably just do ^ ya know...
 
     return soil_crust_factor
 
 def calculate_soil_erodibility_factor(sand_ratio, silt_ratio, clay_ratio, org_mat_ratio):
     """Calculate the Soil Erodibility Factor
-
     Parameters:
         Sand Ratio(%)
-        array from function
+        GDAL array
         
         Silt Ratio(%)
-        array from function
+        GDAL array
         
         Clay Ratio(%)
-        array from function
+        GDAL array
         
         Organic Matter Ratio(%)
-        array from function
+        GDAL array
         
     Returns:
         Soil Erodibility Factor (EF)
-        stored in array
+        GDAL array
     """
     soil_erode_factor = (29.09 + 0.31 * sand_ratio + 0.17 * silt_ratio + 0.33 * sand_ratio / clay_ratio - 2.59 * org_mat_ratio - 0.95 * 0) / 100
 
 
     return soil_erode_factor
+def preprocess_veg_coverage(file_path):
+    """Preprocess the Fraction of Monthly Vegetation Coverage For a Given Month
+    Parameters:
+        Fraction of Monthly Vegetation Coverage
+        file_path: path to Raster file with Fraction of Monthly Vegetation Coverage
+        
+    Returns:
+        fvc: fractional vegetation coverage 
+        GDAL array
+    """
+    fvc = read_raster_as_array(file_path)
+    fvc = ((fvc < 0) | (fvc > 100)) * 0 + ((fvc >= 0) & (fvc <= 100)) * fvc
+    return fvc
 
 def calculate_vegetation_factor(file_path):
     """Calculate the Fraction of Monthly Vegetation Coverage For a Given Month
-
     Parameters:
         Fraction of Monthly Vegetation Coverage
-        file_path: name of Raster file with Fraction of Monthly Vegetation Coverage
-        Raster File: 1 pixel = 5532m
+        file_path: path to Raster file with Fraction of Monthly Vegetation Coverage
         
     Returns:
         Vegetation Factor(COG)
-        stored in array
+        GDAL array
     """
     # read fraction of vegetation coverage data (%)
-    fvc_a = read_raster_as_array(file_path)
-    fvc_a2 = ((fvc_a < 0) | (fvc_a > 100)) * 0 + ((fvc_a >= 0) & (fvc_a <= 100)) * fvc_a
-    vegetation_factor = np.exp(-0.00483*fvc_a2)
+    fvc = preprocess_veg_coverage(file_path)
+    vegetation_factor = np.exp(-0.00483*fvc)
     
     return vegetation_factor
 
 def window_delta(data_arr, window_size):
     """Calculate Delta H(max elevation - min elevation)
-
     Parameters:
         data_arr: Elevation data, in meters
-        read from array
+        GDAL array
         
         window size: number, width of section of pixels
         
     Returns:
         Roughness Length, in cm
-        stored in array 
+        GDAL array
     """
     rows, columns = data_arr.shape
     temp_sum = np.zeros((rows, columns))
@@ -563,13 +481,12 @@ def window_delta(data_arr, window_size):
 
 def calculate_roughness_length(dem):
     """Calculate Roughness Length 
-
     Parameters:
         dem: Elevation data, in meters
         GDAL Dataset
     Returns:
         Roughness Length, in cm
-        stored in array 
+        GDAL array 
     """
     dem_arr = read_dem_as_array(dem)
     geotransform = dem.GetGeoTransform()
@@ -583,65 +500,80 @@ def calculate_roughness_length(dem):
     
 def calculate_chain_rand_roughness(fvc_path):
     """Calculate the Chain Random Roughness
-
     Parameters:
         Fraction of Monthly Vegetation Coverage
-        fvc_path: name of Raster file with clay ratio
-        Raster File: 1 pixel = 5532m
+        fvc_path: path to Raster file with clay ratio
         
         
     Returns:
         Chain Random Roughness(Crr)
-        stored in array
+        GDAL array
     """
-    fvc_a = read_raster_as_array(fvc_path)
-    fvc_a2 = ((fvc_a < 0) | (fvc_a > 100)) * 0 + ((fvc_a >= 0) & (fvc_a <= 100)) * fvc_a
-    Crr = 17.46 * (0.025 + 2.464*fvc_a2**3.56)**0.738
+    fvc = preprocess_veg_coverage(fvc_path)
+    Crr = 17.46 * (0.025 + 2.464*fvc**3.56)**0.738
     return Crr
     
     
 def calculate_surface_terr_rough(dem, fvc_path):
     """Calculate the Surface Terrain Roughness
-
     Parameters:
         Fraction of Monthly Vegetation Coverage
-        fvc_path: name of Raster file with clay ratio
-        Raster File: 1 pixel = 5532m
+        fvc_path: path Raster file with clay ratio
         
         dem: Elevation data, in meters
         
     Returns:
         Surface Terrain Roughness(K')
-        stored in array
+        GDAL array
     """
     Kr  = calculate_roughness_length(dem)
     Crr = calculate_chain_rand_roughness(fvc_path)
     
     KK = np.exp(1.86*Kr - 2.41*Kr**0.934 - 0.127*Crr)
-    KK_a2 = (KK <= 0) * 0.1 + (KK > 0) * KK
-    return KK_a2
+    KK = (KK <= 0) * 0.1 + (KK > 0) * KK
+    return KK
 
 def read_WF(file_path):
+    """Read WF from Raster File to array
+    Parameters:
+        file_path: path to Raster file with Weather Factor
+    Returns:
+        weather_factor: Weather Factor data in an array
+        GDAL array 
+    """
     #reads the output TIF into an array
-    WF_a = read_raster_as_array(file_path)
-    weather_factor = (WF_a <= 0) * 0.1 + (WF_a > 0) * WF_a
+    weather_factor = read_raster_as_array(file_path)
+    weather_factor = (weather_factor <= 0) * 0.1 + (weather_factor > 0) * weather_factor
     return weather_factor
 
 def read_COG(file_path):
+    """Read COG from Raster File to array
+    Parameters:
+        file_path: path to Raster file with Vegetation Factor
+    Returns:
+        vegetation_factor: Vegetation Factor data in an array
+        GDAL array 
+    """
     #reads the output TIF into an array
-    COG_a = read_raster_as_array(file_path)
-    vegetation_factor = (COG_a <= 0) * 0.1 + (COG_a > 0) * COG_a
+    vegetation_factor = read_raster_as_array(file_path)
+    vegetation_factor = (vegetation_factor <= 0) * 0.1 + (vegetation_factor > 0) * vegetation_factor
     return vegetation_factor
 
 def read_Kprime(file_path):
+    """Read K' from Raster File to array
+    Parameters:
+        file_path: path to Raster file with Surface Terrain Roughness Factor
+    Returns:
+        vegetation_factor: Surface Terrain Roughness Factor data in an array
+        GDAL array 
+    """
     #reads the output TIF into an array
-    KK_a = read_raster_as_array(file_path)
-    return KK_a
+    KK = read_raster_as_array(file_path)  ##### _a is array and _a2 is processing JUST TAKE IT OUT IT"S CLEAR ENOUGH and don't take two vars just overwrite one
+    return KK
 
 
 def calculate_monthly_wind_erosion(weather_factor,soil_erode_factor, kprime, soil_crust_factor, cog):
     """Calculate Potential Wind Erosion for a given month
-
     Parameters:
         Potential RWEQ Maximum Horizontal Flux (Qmax)
         array from function
@@ -667,13 +599,13 @@ def calculate_monthly_wind_erosion(weather_factor,soil_erode_factor, kprime, soi
     return wind_erosion, wind_erosionp
 
 
-# - - - - - - - - - - -
-#        Execute
-# - - - - - - - - - - -
-# # # # # # # # # # # # # # # # #
+# - - - - - - - - - - -
+#        Execute
+# - - - - - - - - - - -
+# # # # # # # # # # # # # # # # #
 
 # Step 1 : Weather Factor
-# # # # # # # # # # # # #
+# # # # # # # # # # # # #
 
 #get elevation data
 dem = get_elevation_data(dem_file_path)
@@ -681,43 +613,42 @@ dem = get_elevation_data(dem_file_path)
 #calculate air pressure
 pressure = calculate_air_pressure(dem)
 
-#Compute Monthly Weather Factor
-for k in range(0, 12):
-    num = str(k+1)
-    if k+1 < 10:
-        num = '0'+str(k+1)
+#Compute Monthly Weather Factor 
+for month_id in range(0, 12):
+    mont_id_str = str(month_id+1)
+    if month_id+1 < 10:
+        mont_id_str = '0'+str(month_id+1)
     
-    temp_file_path = temperature_file_path(num)
+    temp_file_path = temperature_file_path(mont_id_str)
     temp = get_monthly_avg_temp(temp_file_path)
     
-    prcp_file_path = precipitation_file_path(num)  
+    prcp_file_path = precipitation_file_path(mont_id_str)  
     precip = get_monthly_total_precip(prcp_file_path)
     
-    sol_file_path = solar_rad_file_path(str(k + 1))
+    sol_file_path = solar_rad_file_path(str(month_id + 1))
     sol_rad = get_monthly_sol_rad(sol_file_path)
     
-    prcp_days_file_path = rain_days_file_path(str(k + 1))
+    prcp_days_file_path = rain_days_file_path(str(month_id + 1))
     precip_days = get_monthly_num_rain_days(prcp_days_file_path)
     
-    snow_factor_file_path = snow_cover_file_path(str(k + 1)) 
+    snow_factor_file_path = snow_cover_file_path(str(month_id + 1)) 
     snow_factor = calculate_snow_factor(snow_factor_file_path)
     
-    #wind_speed_file_path =  'month_wind_day/wind_'
-    wind_speed_file_path = wind_spd_file_path() 
+    wind_speed_file_path = wind_spd_file_path(mont_id_str) 
 
     monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path,k, temp, precip, sol_rad, precip_days, snow_factor, pressure)
-    wf_out_file_path =  wf_out_file_path(str(k + 1))
+    wf_out_file_path =  wind_factor_out_file_path(str(month_id + 1))
     RasterSave(monthly_WF, wf_out_file_path, dem)
 
-# Step 2 : Soil Crusting Factor and Erodibility Factor
-# # # # # # # # # # # # #
-sand_ratio = get_sand_ratio(sand_file_path)
+# Step 2 : Soil Crusting Factor and Erodibility Factor 
+# # # # # # # # # # # # #
+sand_ratio = preprocess_soil_nonneg(sand_file_path)
 
-silt_ratio = get_silt_ratio(silt_file_path)
+silt_ratio = preprocess_soil_nonneg(silt_file_path)
 
-org_mat_ratio = get_org_mat_ratio(org_mat_file_path)
+org_mat_ratio = preprocess_soil_nonneg(org_mat_file_path)
  
-clay_ratio = get_clay_ratio(clay_file_path)
+clay_ratio = preprocess_soil_nonneg(clay_file_path)
 
 scf = calculate_soil_crust_factor(clay_ratio,org_mat_ratio)
 RasterSave(scf,scf_file_path,dem)
@@ -727,61 +658,50 @@ RasterSave(ef,ef_file_path,dem)
 
 
 # Step 3 : Vegetation Factor and Step 4 : Surface Terrain Roughness Factor
-# # # # # # # # # # # # #
-for i in range(0, 12):
-    fvc_file_path = frac_veg_cov_file_path(str(i+1))
-    fvc_file_path = os.path.join(input_data_path, fvc_file_path)
+# # # # # # # # # # # # #
+for month_id in range(0, 12):
+    fvc_file_path = frac_veg_cov_file_path(str(month_id+1))
 
     monthly_cog = calculate_vegetation_factor(fvc_file_path)
-    COG_out_file_path  = cog_out_file_path(str(i+1))
+    COG_out_file_path  = cog_out_file_path(str(month_id+1))
     fvc = gdal.Open(fvc_file_path)
     RasterSave(monthly_cog, COG_out_file_path, fvc)
     
     monthly_kprime = calculate_surface_terr_rough(dem, fvc_file_path)
-    Kprime_out_file_path  = kk_out_file_path(str(i+1))
+    Kprime_out_file_path  = kk_out_file_path(str(month_id+1))
     RasterSave(monthly_kprime, Kprime_out_file_path, fvc)
     
 
 
 # Step 5-6 : Actual and Potential Wind Erosion
-# # # # # # # # # # # # #
+# # # # # # # # # # # # #
 SL_sum = 0.0
-SL_p_sum = 0.0
+SL_wo_veg_sum = 0.0
 
 
-for i in range(0, 12):
-    wf_file_path = wf_out_file_path(str(i + 1))
+for month_id in range(0, 12):
+    wf_file_path = wind_factor_out_file_path(str(month_id + 1))
     wf = read_WF(wf_file_path)
     
-    cog_file_path = cog_out_file_path(str(i+1))
+    cog_file_path = cog_out_file_path(str(month_id+1))
     cog = read_COG(cog_file_path)
     
-    Kprime_file_path = kk_out_file_path(str(i+1))
+    Kprime_file_path = kk_out_file_path(str(month_id+1))
     kprime = read_Kprime(Kprime_file_path)
     
     wind_erosion_m, wind_erosion_pot_m = calculate_monthly_wind_erosion(wf,ef,kprime,scf,cog)
     SL_sum +=  wind_erosion_m
-    SL_p_sum += wind_erosion_pot_m
+    SL_wo_veg_sum += wind_erosion_pot_m
 
 WF_format = gdal.Open(wf_file_path)
-SL_out_file_path = sl_actual_out_file_path()
+SL_out_file_path = sl_actual_out_file_path() 
 RasterSave(SL_sum, SL_out_file_path, WF_format)
 
-SL_p_out_file_path = sl_wo_veg_out_file_path()
-SL_p_out_file_path = os.path.join(data_dir, SL_p_out_file_path)
-RasterSave(SL_p_sum, SL_p_out_file_path, WF_format)
+SL_without_veg_out_file_path = sl_wo_veg_out_file_path()
+RasterSave(SL_wo_veg_sum, SL_without_veg_out_file_path, WF_format)
 
-sand_re = SL_p_sum - SL_sum
+sand_re = SL_wo_veg_sum - SL_sum
 sand_re = (sand_re < 0) * 0 + (sand_re >= 0) * sand_re
 
 sand_re_out_file_path = sand_r_out_file_path()
-sand_re_out_file_path = os.path.join(data_dir, sand_re_out_file_path)
 RasterSave(sand_re, sand_re_out_file_path, dem)
-
-
-
-# In[ ]:
-
-
-
-
