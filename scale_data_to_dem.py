@@ -54,6 +54,9 @@ dem_in_file = os.path.join(data_dir, dem_file_path)
 dem_out_path = os.path.join(utm_dir, dem_file_path)
 gdal.Warp(dem_out_path, dem_in_file, srcSRS='EPSG:4326', dstSRS='EPSG:32648')
 
+##Average Number of Rain Days per Month
+rain_days = [0,1,1,2,3,10,11,14,5,2,1,2]
+
 for k in range(0, 12):
     num = str(k+1)
     if k+1 < 10:
@@ -88,8 +91,8 @@ for k in range(0, 12):
     ###TEMP PRCP DAYS
     raster = gdal.Open('data_UTM/input/dem_clipped.tif')
     array = raster.ReadAsArray(0, 0, raster.RasterXSize, raster.RasterYSize)
-    prcp_temp = (array < 0) * 0 + (array >= 0) * 23
-    prcp_temp = np.tile(23, (raster.RasterYSize, raster.RasterXSize))
+    prcp_temp = (array < 0) * 0 + (array >= 0) * raindays[k]
+    prcp_temp = np.tile(raindays[k], (raster.RasterYSize, raster.RasterXSize))
     prcp_days_file_path = 'month_prcp_day/prcp_day_' + str(k + 1) + '.tif'
     prcp_days_file_path = os.path.join(utm_dir, prcp_days_file_path)
     RasterSave(prcp_temp, prcp_days_file_path, raster)
