@@ -4,11 +4,16 @@
 ## Wind Erosion Model
 ## Written by Charlie Weil & Isita Talukdar, August 2020
 ## Inspired by Huang Binbin's approach.
-
 import numpy as np
+import numpy.ma as ma
 import gdal
 import os
+import matplotlib.pyplot as plt #visualisation
 
+def make_directory(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+        
 # - - - - - - - - - - -
 #     File paths 
 # - - - - - - - - - - -
@@ -16,11 +21,13 @@ import os
 data_dir ="data_UTM/"
 input_data_path = os.path.join(data_dir, 'input/')
 intermediate_data_path = os.path.join(data_dir, 'intermediate/')
+make_directory(intermediate_data_path)
 output_data_path = os.path.join(data_dir, 'output/')
+make_directory(output_data_path)
 
 dem_filename = 'dem_aoi.tif'
 dem_file_path = os.path.join(input_data_path, dem_filename)
-
+    
 # Climate Input Data
 
 def temperature_file_path(month_num):
@@ -48,8 +55,10 @@ def wind_spd_file_path(month_num):
     return os.path.join(input_data_path, wind_speed_filename)
 
 def weather_factor_out_file_path(month_num):
-    wf_out_filename = 'WF/wf_' + month_num + '.tif'
-    return os.path.join(intermediate_data_path, wf_out_filename)
+    wf_file_path = intermediate_data_path + 'WF/'
+    make_directory(wf_file_path)
+    wf_out_filename = 'wf_' + month_num + '.tif'
+    return os.path.join(wf_file_path, wf_out_filename)
 
 # Soil Input Data
 sand_filename = 'soil/sand.tif'
@@ -76,12 +85,16 @@ def frac_veg_cov_file_path(month_num):
     return os.path.join(input_data_path, frac_veg_cov_filename)
 
 def cog_out_file_path(month_num):
-    cog_out_filename = 'COG/COG_' + month_num + '.tif'
-    return os.path.join(intermediate_data_path, cog_out_filename)
+    cog_file_path = intermediate_data_path + "COG/"
+    make_directory(cog_file_path)
+    cog_out_filename = 'COG_' + month_num + '.tif'
+    return os.path.join(cog_file_path, cog_out_filename)
 
 def kk_out_file_path(month_num):
-    kk_out_filename = 'KK/KK_' + month_num + '.tif'
-    return os.path.join(intermediate_data_path, kk_out_filename)
+    kk_file_path = intermediate_data_path + "KK/"
+    make_directory(kk_file_path)
+    kk_out_filename = 'KK_' + month_num + '.tif'
+    return os.path.join(kk_file_path, kk_out_filename)
 
 #Actual and Predicted Wind Erosion Output Paths
 
@@ -93,6 +106,10 @@ def sl_wo_veg_out_file_path():
     sl_wo_veg_out_filename = 'SL_without_veg.tif'
     return os.path.join(output_data_path, sl_wo_veg_out_filename)
 
+def sl_fvc_100_out_file_path():
+    sl_fvc_100_out_filename = 'SL_fvc_100.tif'
+    return os.path.join(output_data_path, sl_fvc_100_out_filename)
+
 def sand_r_out_file_path():
     sand_re_out_filename = 'sand_re.tif'
     return os.path.join(output_data_path, sand_re_out_filename)
@@ -100,8 +117,10 @@ def sand_r_out_file_path():
 # - - - - - - - - - - -
 #      Parameters
 # - - - - - - - - - - -
-
+HIST_BINS = 50
 Kr_WINDOW_SIZE = 3
+en_corr_plot = True
+en_hist_plot = False
 
 # days of month 1-12
 mondays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -118,25 +137,26 @@ def execute(args):
     ## This is where the steps in "Execute" shoulf eventually go.
     return None
 
-def RasterSave(data, path, d1):
+def RasterSave(data, path, ref_file_path):
     """Save Data to Raster File
     Parameters:
         data: array
         path: path where new Raster should be saved
-        d1: GDAl dataset used to set dimensions of new raster
+        ref_file_path: file path of reference file used to set dimensions of new raster
         
     Returns:
         --
     """
+    ref_raster = gdal.Open(ref_file_path)
     ndv = -9999
     driver = gdal.GetDriverByName('GTiff')
-    ds = driver.Create(path, d1.RasterXSize, d1.RasterYSize, 1, gdal.GDT_Float32)
-    ds.SetGeoTransform(d1.GetGeoTransform())
-    ds.SetProjection(d1.GetProjection())
+    ds = driver.Create(path, ref_raster.RasterXSize, ref_raster.RasterYSize, 1, gdal.GDT_Float32)
+    ds.SetGeoTransform(ref_raster.GetGeoTransform())
+    ds.SetProjection(ref_raster.GetProjection())
     data[np.isnan(data)] = ndv
     ds.GetRasterBand(1).WriteArray(data)
     ds.GetRasterBand(1).SetNoDataValue(ndv)
-
+    data[data == ndv] = np.nan
     del ds
     
 def read_raster_as_array(file_path):
@@ -566,7 +586,7 @@ def read_Kprime(file_path):
     return KK
 
 
-def calculate_monthly_wind_erosion(weather_factor,soil_erode_factor, kprime, soil_crust_factor, cog):
+def calculate_monthly_wind_erosion(weather_factor,soil_erode_factor, kprime, soil_crust_factor, cog, fvc_100):
     """Calculate Potential Wind Erosion for a given month
     Parameters:
         Potential RWEQ Maximum Horizontal Flux (Qmax)
@@ -589,8 +609,17 @@ def calculate_monthly_wind_erosion(weather_factor,soil_erode_factor, kprime, soi
     sp = 105.71 * (weather_factor * soil_erode_factor * kprime * soil_crust_factor)**-0.3711
     wind_erosionp = 100/(sp * sp +0.01)*Qmaxp * (np.exp(-(50 / (sp + 0.01)) ** 2))
 
-    return wind_erosion, wind_erosionp
+    #100 Vegetation Coverage Wind Erosion 
+    Qmax = 109.8 * (weather_factor * soil_erode_factor * kprime * soil_crust_factor * fvc_100)
+    s = 105.71 * (weather_factor * soil_erode_factor * kprime * soil_crust_factor * fvc_100)**-0.3711
+    wind_erosion_cog100 = 100/(s * s +0.01)*Qmax * (np.exp(-(50 / (s + 0.01)) ** 2))
+    return wind_erosion, wind_erosionp,wind_erosion_cog100
 
+def compute_corr(arr_x, arr_y):
+    a=ma.masked_invalid(arr_x)
+    b=ma.masked_invalid(arr_y)
+    msk = (~a.mask & ~b.mask)
+    return round(ma.corrcoef(a[msk],b[msk])[0,1], 3)
 
 # - - - - - - - - - - -
 #        Execute
@@ -628,23 +657,27 @@ for month_id in range(0, 12):
 
     monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path, temp, precip, sol_rad, precip_days, snow_factor, pressure)
     wf_out_file_path =  weather_factor_out_file_path(str(month_id + 1))
-    RasterSave(monthly_WF, wf_out_file_path, dem)
+    RasterSave(monthly_WF, wf_out_file_path, dem_file_path)
     
 # Step 2 : Soil Crusting Factor and Erodibility Factor 
 # # # # # # # # # # # # #
 sand_ratio = preprocess_soil_nonneg(sand_file_path)
+sand_ratio = sand_ratio*100
 
 silt_ratio = preprocess_soil_nonneg(silt_file_path)
+silt_ratio = silt_ratio*100
 
 org_mat_ratio = preprocess_soil_nonneg(org_mat_file_path)
- 
+org_mat_ratio = org_mat_ratio/1000
+
 clay_ratio = preprocess_soil_nonneg(clay_file_path)
+clay_ratio = clay_ratio*100
 
 scf = calculate_soil_crust_factor(clay_ratio,org_mat_ratio)
-RasterSave(scf,scf_file_path,dem)
+RasterSave(scf,scf_file_path,dem_file_path)
 
 ef = calculate_soil_erodibility_factor(sand_ratio, silt_ratio, clay_ratio, org_mat_ratio) 
-RasterSave(ef,ef_file_path,dem)
+RasterSave(ef,ef_file_path, dem_file_path)
 
 
 # Step 3 : Vegetation Factor and Step 4 : Surface Terrain Roughness Factor
@@ -654,12 +687,11 @@ for month_id in range(0, 12):
 
     monthly_cog = calculate_vegetation_factor(fvc_file_path)
     COG_out_file_path  = cog_out_file_path(str(month_id+1))
-    fvc = gdal.Open(fvc_file_path)
-    RasterSave(monthly_cog, COG_out_file_path, fvc)
+    RasterSave(monthly_cog, COG_out_file_path, fvc_file_path)
     
     monthly_kprime = calculate_surface_terr_rough(dem_file_path, fvc_file_path)
     Kprime_out_file_path = kk_out_file_path(str(month_id+1))
-    RasterSave(monthly_kprime, Kprime_out_file_path, fvc)
+    RasterSave(monthly_kprime, Kprime_out_file_path, fvc_file_path)
     
 
 
@@ -667,30 +699,146 @@ for month_id in range(0, 12):
 # # # # # # # # # # # # #
 SL_sum = 0.0
 SL_wo_veg_sum = 0.0
+SL_fvc_100 = 0.0
 
+if en_corr_plot:
+    fig_corr_wf, axes_corr_wf = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
+    fig_corr_ef, axes_corr_ef = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
+    fig_corr_k, axes_corr_k = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
+    fig_corr_scf, axes_corr_scf = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
+    fig_corr_cog, axes_corr_cog = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
+
+if en_hist_plot:
+    fig_hist_wf, axes_hist_wf = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
+    fig_hist_ef, axes_hist_ef = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
+    fig_hist_k, axes_hist_k = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
+    fig_hist_scf, axes_hist_scf = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
+    fig_hist_cog, axes_hist_cog = plt.subplots(nrows=4,ncols=3, figsize=(30, 20))
 
 for month_id in range(0, 12):
     wf_file_path = weather_factor_out_file_path(str(month_id + 1))
     wf = read_WF(wf_file_path)
     cog_file_path = cog_out_file_path(str(month_id+1))
     cog = read_COG(cog_file_path)
-    
+    fvc_100 = np.zeros((cog.shape[0], cog.shape[1]))
+    fvc_100[cog == np.nan] = np.nan
+    fvc_100[cog != np.nan] = np.exp(-0.00483*100)
     Kprime_file_path = kk_out_file_path(str(month_id+1))
     kprime = read_Kprime(Kprime_file_path)
     
-    wind_erosion_m, wind_erosion_pot_m = calculate_monthly_wind_erosion(wf,ef,kprime,scf,cog)
+    wind_erosion_m, wind_erosion_pot_m, wind_erosion_fvc_100 = calculate_monthly_wind_erosion(wf,ef,kprime,scf,cog, fvc_100)
+    
     SL_sum +=  wind_erosion_m
     SL_wo_veg_sum += wind_erosion_pot_m
+    SL_fvc_100 += wind_erosion_fvc_100
+    
+    if en_hist_plot:
+        row = int(month_id / 3)
+        col = month_id % 3
+        axes_hist_wf[row, col].hist(wf.ravel(), bins= HIST_BINS)
+        axes_hist_ef[row, col].set_title('wf:'+ str(month_id+1), fontdict={'fontsize':'16'});
 
-WF_format = gdal.Open(wf_file_path)
+        axes_hist_ef[row, col].hist(ef.ravel(), bins = HIST_BINS)
+        axes_hist_ef[row, col].set_title('ef:'+ str(month_id+1), fontdict={'fontsize':'16'});
+        
+        axes_hist_k[row, col].hist(kprime.ravel(), bins = HIST_BINS)
+        axes_hist_k[row, col].set_title('k:'+ str(month_id+1), fontdict={'fontsize':'16'});
+        
+        axes_hist_scf[row, col].hist(scf.ravel(), bins = HIST_BINS)
+        axes_hist_scf[row, col].set_title('scf:'+ str(month_id+1), fontdict={'fontsize':'16'});
+        
+        axes_hist_cog[row, col].hist(cog.ravel(), bins = HIST_BINS)
+        axes_hist_cog[row, col].set_title('cog:'+ str(month_id+1), fontdict={'fontsize':'16'}); 
+        
+    if en_corr_plot:
+        row = int(month_id / 3)
+        col = month_id % 3
+        axes_corr_wf[row, col].scatter(wf,wind_erosion_m)
+        plot_title = 'wf:'+ str(month_id+1)+ ', corr coeff = '+ str(compute_corr(wf,wind_erosion_m))
+        axes_corr_wf[row, col].set_title(plot_title, fontdict={'fontsize':'16'}); 
+        
+        axes_corr_ef[row, col].scatter(ef,wind_erosion_m)
+        plot_title = 'ef:'+ str(month_id+1)+ ', corr coeff = '+ str(compute_corr(ef,wind_erosion_m))
+        axes_corr_ef[row, col].set_title(plot_title, fontdict={'fontsize':'16'}); 
+        
+        axes_corr_k[row, col].scatter(kprime,wind_erosion_m)
+        plot_title = 'kprime:'+ str(month_id+1)+ ', corr coeff = '+ str(compute_corr(kprime,wind_erosion_m))
+        axes_corr_k[row, col].set_title(plot_title, fontdict={'fontsize':'16'}); 
+        
+        axes_corr_scf[row, col].scatter(scf,wind_erosion_m)
+        plot_title = 'scf:'+ str(month_id+1)+ ', corr coeff = '+ str(compute_corr(scf,wind_erosion_m))
+        axes_corr_scf[row, col].set_title(plot_title, fontdict={'fontsize':'16'}); 
+        
+        axes_corr_cog[row, col].scatter(cog,wind_erosion_m)
+        plot_title = 'cog:'+ str(month_id+1)+ ', corr coeff = '+ str(compute_corr(cog,wind_erosion_m))
+        axes_corr_cog[row, col].set_title(plot_title, fontdict={'fontsize':'16'}); 
+
+    
+if en_hist_plot:
+    fig_hist_wf.tight_layout()
+    fig_hist_ef.tight_layout()
+    fig_hist_k.tight_layout()
+    fig_hist_scf.tight_layout()
+    fig_hist_cog.tight_layout()
+    fig_file_dir = 'data_UTM/output/histograms_plots/'
+    make_directory(fig_file_dir)
+    fig_file_path = os.path.join(fig_file_dir, 'wf_hist.png')
+    fig_hist_wf.savefig(fig_file_path)
+    fig_file_path = os.path.join(fig_file_dir, 'ef_hist.png')
+    fig_hist_ef.savefig(fig_file_path)
+    fig_file_path = os.path.join(fig_file_dir, 'k_hist.png')
+    fig_hist_k.savefig(fig_file_path)
+    fig_file_path = os.path.join(fig_file_dir, 'scf_hist.png')
+    fig_hist_scf.savefig(fig_file_path)
+    fig_file_path = os.path.join(fig_file_dir, 'cog_hist.png')
+    fig_hist_cog.savefig(fig_file_path)
+    
+if en_corr_plot:
+    fig_corr_wf.tight_layout()
+    fig_corr_ef.tight_layout()
+    fig_corr_k.tight_layout()
+    fig_corr_scf.tight_layout()
+    fig_corr_cog.tight_layout()
+    fig_file_dir = 'data_UTM/output/correlation_plots/'
+    make_directory(fig_file_dir)
+    fig_file_path = os.path.join(fig_file_dir, 'wf_vs_sl.png')
+    fig_corr_wf.savefig(fig_file_path)
+    fig_file_path = os.path.join(fig_file_dir, 'ef_vs_sl.png')
+    fig_corr_ef.savefig(fig_file_path)
+    fig_file_path = os.path.join(fig_file_dir, 'k_vs_sl.png')
+    fig_corr_k.savefig(fig_file_path)
+    fig_file_path = os.path.join(fig_file_dir, 'scf_vs_sl.png')
+    fig_corr_scf.savefig(fig_file_path)
+    fig_file_path = os.path.join(fig_file_dir, 'cog_vs_sl.png')
+    fig_corr_cog.savefig(fig_file_path)
+plt.show()
+
 SL_out_file_path = sl_actual_out_file_path() 
-RasterSave(SL_sum, SL_out_file_path, WF_format)
+RasterSave(SL_sum, SL_out_file_path, wf_file_path)
+
+fig_file_dir = 'data_UTM/output/histograms_plots/'
+make_directory(fig_file_dir)
+fig_file_path = os.path.join(fig_file_dir, 'SL_actual_hist.png')
+plt.hist(SL_sum.ravel(), bins=HIST_BINS)
+plt.savefig(fig_file_path)
+plt.show()
 
 SL_without_veg_out_file_path = sl_wo_veg_out_file_path()
-RasterSave(SL_wo_veg_sum, SL_without_veg_out_file_path, WF_format)
+RasterSave(SL_wo_veg_sum, SL_without_veg_out_file_path, wf_file_path)
+
+fig_file_path = os.path.join(fig_file_dir, 'SL_wo_veg_hist.png')
+plt.hist(SL_wo_veg_sum.ravel(), bins=HIST_BINS)
+plt.savefig(fig_file_path)
+plt.show()
+
+SL_fvc_100_file_path = sl_fvc_100_out_file_path()
+RasterSave(SL_fvc_100, SL_fvc_100_file_path, wf_file_path)
+fig_file_path = os.path.join(fig_file_dir, 'SL_fvc_100_hist.png')
+plt.hist(SL_fvc_100.ravel(), bins=HIST_BINS)
+plt.savefig(fig_file_path)
 
 sand_re = SL_wo_veg_sum - SL_sum
 sand_re = (sand_re < 0) * 0 + (sand_re >= 0) * sand_re
 
 sand_re_out_file_path = sand_r_out_file_path()
-RasterSave(sand_re, sand_re_out_file_path, dem)
+RasterSave(sand_re, sand_re_out_file_path, dem_file_path)
