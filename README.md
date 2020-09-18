@@ -2,15 +2,15 @@
 
 #### Requirements
 
-* Sample data (can be downloaded [here](https://drive.google.com/drive/folders/1-9PPMZ4qkOmjVlSRrYFN0wqVeVQGN9da?usp=sharing))
+* Sample data (can be downloaded [here](https://drive.google.com/file/d/1YQNOEnWyTdu1Po_D2klCpXNbAR3hdDgd/view?usp=sharing))
 * A python environment with GDAL installed
 
 #### Usage example
- ```python wind_erosion.py --data_dir=../Data/ --suffix='sample' --dem_file_name=dem_aoi.tif --temper_dir=temperature_degC/ --temper_prefix=wc2.0_30s_tave_ --precip_dir=precipitation_mm/ --precip_prefix=wc2.0_30s_prec_ --sol_dir=solar_radiation/ --sol_prefix=shortwave_radiation_ --prcp_days_dir=month_prcp_day/ --prcp_days_prefix=prcp_day_ --snow_dir=snow_gm2/ --snow_prefix=snow_ --wind_speed_dir=wind_speed_monthly_clipped/ --wind_speed_prefix=wind_speed_ --sand_dir=soil/ --sand_file_name=sand.tif --silt_dir=soil/ --silt_file_name=silt.tif --clay_dir=soil/ --clay_file_name=clay.tif --som_dir=soil/ --som_file_name=soil_organic_matter_gm2.tif --fvc_dir=vegetation_percent_cover/ --fvc_prefix=vegetation_percent_cover_ ```
+ ```python wind_erosion.py --input_data_dir=<Inputs Data Dir> --sl_output_suffix=<suffix> --dem_file_name=dem_aoi.tif --temper_dir=temperature_degC/ --temper_prefix=wc2.0_30s_tave_ --precip_dir=precipitation_mm/ --precip_prefix=wc2.0_30s_prec_ --sol_dir=solar_radiation/ --sol_prefix=shortwave_radiation_ --prcp_days_dir=month_prcp_day/ --prcp_days_prefix=prcp_day_ --snow_dir=snow_gm2/ --snow_prefix=snow_ --wind_speed_dir=wind_speed_monthly_clipped/ --wind_speed_prefix=wind_speed_ --sand_dir=soil/ --sand_file_name=sand.tif --silt_dir=soil/ --silt_file_name=silt.tif --clay_dir=soil/ --clay_file_name=clay.tif --som_dir=soil/ --som_file_name=soil_organic_matter_gm2.tif --fvc_dir=vegetation_percent_cover/ --fvc_prefix=vegetation_percent_cover_ ```
 
 #### Inputs
 
-  * data_dir is the location of the unzipped Sample Data
+  * input_data_dir is the location of the unzipped Sample Data
   * temper_dir/temper_prefix_<n>.tif: monthly average temperature in deg C
   * precip_dir/precip_prefix_<n>.tif: monthly total precipitation in mm
   * sol_dir/sol_prefix_<n>.tif: monthly solar radiation in MJ/m^2
@@ -26,8 +26,10 @@
   where n is is a month index from 1 to 12
 
 #### Outputs 
-  * data_dir/Output/SL_<n>.tif: monthly Soil Loss in kg/m^2
-  * data_dir/Output/SL_{suffix}.tif: Annual Soil Loss in kg/m^2
+  * data_dir/Output/SL_(out_suffix}_<n>.tif: monthly Soil Loss in kg/m^2
+  * data_dir/Output/SL_{out_suffix}.tif: Annual Soil Loss in kg/m^2
+ 
+ where out_suffix is the argument value for --sl_output_suffix(default is "none")
    
 #### Intermediate
   * data_dir/Intermediate/model_intermediate/WF/wf_<n>.tif: monthly Weather Factor in kg/m
