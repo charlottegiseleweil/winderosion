@@ -26,16 +26,16 @@
   where n is is a month index from 1 to 12
 
 #### Outputs 
-
+  * data_dir/Output/SL_<n>.tif: monthly Soil Loss in kg/m^2
+  * data_dir/Output/SL_{suffix}.tif: Annual Soil Loss in kg/m^2
+   
+#### Intermediate
   * data_dir/Intermediate/model_intermediate/WF/wf_<n>.tif: monthly Weather Factor in kg/m
   * data_dir/Intermediate/model_intermediate/KK/KK_<n>.tif: monthly Surface Terrain Roughness unitless
   * data_dir/Intermediate/model_intermediate/COG/COG_<n>.tif: monthly Vegeation Factor unitless
   * data_dir/Intermediate/model_intermediate/EF.tif: Erodible Fraction unitless
   * data_dir/Intermediate/model_intermediate/SCF.tif: Soil Crusting Factor unitless
 
-  * data_dir/Output/SL_<n>.tif: monthly Soil Loss in kg/m^2
-  * data_dir/Output/SL_{suffix}.tif: Annual Soil Loss in kg/m^2
-   
 #### Runtime
 Seconds.
   
