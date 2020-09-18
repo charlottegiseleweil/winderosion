@@ -2,25 +2,47 @@
 
 #### Requirements
 
-* Sample data (can be downloaded [here](https://drive.google.com/drive/folders/19JXm307FB47rQ3QBA0cwsKx263z4yW8e?usp=sharing))
+* Sample data (can be downloaded [here](https://drive.google.com/drive/folders/1gIOkCWPoLrU5BVdKRGwBWsa-kMk5Nfk4?usp=sharing))
 * A python environment with GDAL installed
 
 #### Usage example
- ```python wind_erosion.py --data_dir=../Data/sample --dem_file_name=dem_aoi.tif --temper_dir=temperature_degC/ --temper_prefix=wc2.0_30s_tave_ --precip_dir=precipitation_mm/ --precip_prefix=wc2.0_30s_prec_ --sol_dir=solar_radiation/ --sol_prefix=shortwave_radiation_ --prcp_days_dir=month_prcp_day/ --prcp_days_prefix=prcp_day_ --snow_dir=snow_gm2/ --snow_prefix=snow_ --wind_speed_dir=wind_speed_monthly_clipped/ --wind_speed_prefix=wind_speed_ --sand_dir=soil/ --sand_file_name=sand.tif --silt_dir=soil/ --silt_file_name=silt.tif --clay_dir=soil/ --clay_file_name=clay.tif --som_dir=soil/ --som_file_name=soil_organic_matter_gm2.tif --fvc_dir=vegetation_percent_cover/ --fvc_prefix=vegetation_percent_cover_ ```
+ ```python wind_erosion.py --data_dir=../Data/ --dem_file_name=dem_aoi.tif --temper_dir=temperature_degC/ --temper_prefix=wc2.0_30s_tave_ --precip_dir=precipitation_mm/ --precip_prefix=wc2.0_30s_prec_ --sol_dir=solar_radiation/ --sol_prefix=shortwave_radiation_ --prcp_days_dir=month_prcp_day/ --prcp_days_prefix=prcp_day_ --snow_dir=snow_gm2/ --snow_prefix=snow_ --wind_speed_dir=wind_speed_monthly_clipped/ --wind_speed_prefix=wind_speed_ --sand_dir=soil/ --sand_file_name=sand.tif --silt_dir=soil/ --silt_file_name=silt.tif --clay_dir=soil/ --clay_file_name=clay.tif --som_dir=soil/ --som_file_name=soil_organic_matter_gm2.tif --fvc_dir=vegetation_percent_cover/ --fvc_prefix=vegetation_percent_cover_ ```
 
 #### Inputs
 
   * data_dir is the location of the unzipped Sample Data
-  * temper_dir, precip_dir, sol_dir, prcp_days_dir, snow_dir, wind_speed_dir, fvc_dir are the directory names inside the Sample_Data/inputs folder where all the different monthly input data is located
-  * <>_prefix are the prefix of each of the filenames, the code assumes files are named: prefix_1.tif(January), prefix_2.tif(February), etc
-  * sand_dir, silt_dir, clay_dir, som_dir are the directory names for the non-temporal soil inputs
+  * temper_dir/temper_prefix_<n>.tif: monthly average temperature in deg C
+  * precip_dir/precip_prefix_<n>.tif: monthly total precipitation in mm
+  * sol_dir/sol_prefix_<n>.tif: monthly solar radiation in MJ/m^2
+  * prcp_days_dir/prcp_days_prefix_<n>.tif: monthly number of rain days 
+  * snow_dir/snow_prefix_<n>.tif: monthly snow cover factor (probability)
+  * wind_speed_dir/wind_speed_prefix_<n>.tif: monthly average wind speed in m/s
+  * fvc_dir/fvc_prefix_<n>.tif: monthly fractional vegetation coverage in %
+  * sand_dir/sand_file_name: non-temporal sand ratio (filename is a TIF file including extension)
+  * silt_dir/silt_file_name: non-temporal silt ratio (filename is a TIF file including extension)
+  * clay_dir/clay_file_name: non-temporal clay ratio (filename is a TIF file including extension)
+  * som_dir/som_file_name: non-temporal organic matter ratio, data expected to be percentage*100 (filename is a TIF file including extension)
+ 
+  where n is is a month index from 1 to 12
 
 #### Outputs 
 
-* [ EXPLICIT HERE WHAT ARE all the model outputs (with units!!)
+  * data_dir/Intermediate/model_intermediate/WF/wf_<n>.tif: monthly Weather Factor in kg/m
+  * data_dir/Intermediate/model_intermediate/KK/KK_<n>.tif: monthly Surface Terrain Roughness unitless
+  * data_dir/Intermediate/model_intermediate/COG/COG_<n>.tif: monthly Vegeation Factor unitless
+  * data_dir/Intermediate/model_intermediate/EF.tif: Erodible Fraction unitless
+  * data_dir/Intermediate/model_intermediate/SCF.tif: Soil Crusting Factor unitless
+ 
+  * data_dir/Output/SL_<n>.tif: monthly Soil Loss in kg/m^2
+  * data_dir/Output/SL_actual.tif: Annual Soil Loss in kg/m^2
+  * data_dir/Output/SL_without_veg.tif: Annual Potential Soil Loss(No Vegetation Factor) in kg/m^2
+  * data_dir/Output/SL_fvc_100.tif: Annual Soil Loss with Theoretical 100% fractional vegetation coverage in kg/m^2
+  * data_dir/Output/SL_fvc_50.tif: Annual Soil Loss with Theoretical 50% fractional vegetation coverage in kg/m^2
+  * data_dir/Output/SL_fvc_10p.tif: Annual Soil Loss with 110% of original fractional vegetation coverage in kg/m^2
+  * data_dir/Output/SL_fvc_20p.tif: Annual Soil Loss with 120% of original fractional vegetation coverage in kg/m^2
    
 #### Runtime
-Seconds.
+4.5 Seconds.
   
 
   
