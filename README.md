@@ -2,11 +2,11 @@
 
 #### Requirements
 
-* Sample data (can be downloaded [here](https://drive.google.com/drive/folders/1gIOkCWPoLrU5BVdKRGwBWsa-kMk5Nfk4?usp=sharing))
+* Sample data (can be downloaded [here](https://drive.google.com/drive/folders/1-9PPMZ4qkOmjVlSRrYFN0wqVeVQGN9da?usp=sharing))
 * A python environment with GDAL installed
 
 #### Usage example
- ```python wind_erosion.py --data_dir=../Data/ --dem_file_name=dem_aoi.tif --temper_dir=temperature_degC/ --temper_prefix=wc2.0_30s_tave_ --precip_dir=precipitation_mm/ --precip_prefix=wc2.0_30s_prec_ --sol_dir=solar_radiation/ --sol_prefix=shortwave_radiation_ --prcp_days_dir=month_prcp_day/ --prcp_days_prefix=prcp_day_ --snow_dir=snow_gm2/ --snow_prefix=snow_ --wind_speed_dir=wind_speed_monthly_clipped/ --wind_speed_prefix=wind_speed_ --sand_dir=soil/ --sand_file_name=sand.tif --silt_dir=soil/ --silt_file_name=silt.tif --clay_dir=soil/ --clay_file_name=clay.tif --som_dir=soil/ --som_file_name=soil_organic_matter_gm2.tif --fvc_dir=vegetation_percent_cover/ --fvc_prefix=vegetation_percent_cover_ ```
+ ```python wind_erosion.py --data_dir=../Data/ --suffix='sample' --dem_file_name=dem_aoi.tif --temper_dir=temperature_degC/ --temper_prefix=wc2.0_30s_tave_ --precip_dir=precipitation_mm/ --precip_prefix=wc2.0_30s_prec_ --sol_dir=solar_radiation/ --sol_prefix=shortwave_radiation_ --prcp_days_dir=month_prcp_day/ --prcp_days_prefix=prcp_day_ --snow_dir=snow_gm2/ --snow_prefix=snow_ --wind_speed_dir=wind_speed_monthly_clipped/ --wind_speed_prefix=wind_speed_ --sand_dir=soil/ --sand_file_name=sand.tif --silt_dir=soil/ --silt_file_name=silt.tif --clay_dir=soil/ --clay_file_name=clay.tif --som_dir=soil/ --som_file_name=soil_organic_matter_gm2.tif --fvc_dir=vegetation_percent_cover/ --fvc_prefix=vegetation_percent_cover_ ```
 
 #### Inputs
 
@@ -32,17 +32,12 @@
   * data_dir/Intermediate/model_intermediate/COG/COG_<n>.tif: monthly Vegeation Factor unitless
   * data_dir/Intermediate/model_intermediate/EF.tif: Erodible Fraction unitless
   * data_dir/Intermediate/model_intermediate/SCF.tif: Soil Crusting Factor unitless
- 
+
   * data_dir/Output/SL_<n>.tif: monthly Soil Loss in kg/m^2
-  * data_dir/Output/SL_actual.tif: Annual Soil Loss in kg/m^2
-  * data_dir/Output/SL_without_veg.tif: Annual Potential Soil Loss(No Vegetation Factor) in kg/m^2
-  * data_dir/Output/SL_fvc_100.tif: Annual Soil Loss with Theoretical 100% fractional vegetation coverage in kg/m^2
-  * data_dir/Output/SL_fvc_50.tif: Annual Soil Loss with Theoretical 50% fractional vegetation coverage in kg/m^2
-  * data_dir/Output/SL_fvc_10p.tif: Annual Soil Loss with 110% of original fractional vegetation coverage in kg/m^2
-  * data_dir/Output/SL_fvc_20p.tif: Annual Soil Loss with 120% of original fractional vegetation coverage in kg/m^2
+  * data_dir/Output/SL_{suffix}.tif: Annual Soil Loss in kg/m^2
    
 #### Runtime
-4.5 Seconds.
+Seconds.
   
 
   
