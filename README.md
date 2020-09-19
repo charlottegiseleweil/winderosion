@@ -63,7 +63,7 @@
 	  * ../test_out2/Output/SL_actual_<n>.tif: monthly Soil Loss in kg/m^2
 	  * ../test_out2/Output/SL_actual.tif: Annual Soil Loss in kg/m^2
 
-          where n is is a month index from 1 to 12
+	where n is is a month index from 1 to 12
   
   #### Intermediate
 	  * ../test_out2/Intermediate/model_intermediate/WF/wf_<n>.tif: monthly Weather Factor in kg/m
