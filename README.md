@@ -24,7 +24,7 @@
 	 * ../Inputs/soil/clay.tif : non-temporal clay ratio (filename is a TIF file including extension) 
 	 * ../Inputs/soil/soil_organic_matter_gm2.tif : non-temporal organic matter ratio, data expected to be percentage*100 (filename is a TIF file including extension)
   
-  where n is is a month index from 1 to 12
+  	 where n is is a month index from 1 to 12
   
   #### Outputs 
 	  * ../test_out1/Output/SL_actual_<n>.tif: monthly Soil Loss in kg/m^2
