@@ -659,6 +659,10 @@ def calculate_wind_factor_monthly(file_path):
      # daily wind speed (m/s)
     wind_speed = read_raster_as_array(file_path) 
     wind_speed = wind_speed * wind_speed_factor 
+    
+    #Forcing wind speed to zero if it is less than the RWEQ threshold of 5m/s
+    wind_speed = (wind_speed < 5) * 0 + (wind_speed >= 5) * wind_speed
+    
     # wind factor
     wf = wind_speed * (wind_speed - 5) ** 2
     
