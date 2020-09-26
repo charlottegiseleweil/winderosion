@@ -8,7 +8,7 @@
 #### Usage example
 User may either specify directly `input_data_dir` in which inputs must be organized as in the sample data:
 
-```python ../wind_erosion.py --sl_output_suffix=actual --input_data_dir=../Inputs --data_dir=../test_out1```
+```python wind_erosion.py --sl_output_suffix=firstrun --input_data_dir=../Data/Inputs --data_dir=../Data```
 
 or specify each input path individually:
 
