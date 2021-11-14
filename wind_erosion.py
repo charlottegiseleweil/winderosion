@@ -40,19 +40,6 @@ argv = sys.argv[1:]
 
 input_dir_given = False
 
-# dem_dir_given = False
-# temper_dir_given = False
-# precip_dir_given = False
-# sol_dir_given = False
-# prcp_days_dir_given = False
-# snow_dir_given = False
-# wind_speed_dir_given = False
-# sand_dir_given = False
-# silt_dir_given = False
-# clay_dir_given = False
-# som_dir_given = False
-# fvc_dir_given = False
-
 dem_dir = ""
 dem_file_name = ""
 temper_dir = ""
@@ -207,8 +194,8 @@ if input_dir_given:
     prcp_days_prefix = "prcp_day_"
     snow_dir = os.path.join(input_dir, "snow_gm2/")
     snow_prefix = "snow_"
-    wind_speed_dir = os.path.join(input_dir, "wind_speed_monthly_clipped/")
-    wind_speed_prefix = "wind_speed_"
+    wind_speed_dir = os.path.join(input_dir, "wind_speed_daily/")
+    wind_speed_prefix = "utm_daily_wind_"
     sand_dir = os.path.join(input_dir, "soil/")
     sand_file_name = "sand.tif"
     silt_dir = os.path.join(input_dir, "soil/")
@@ -303,27 +290,12 @@ print("\t * "+precip_dir+precip_prefix+ "<n>.tif: monthly total precipitation in
 print("\t * "+sol_dir+sol_prefix+ "<n>.tif: monthly solar radiation in MJ/m^2 ")
 print("\t * "+prcp_days_dir+prcp_days_prefix+ "<n>.tif: monthly number of rain days  ")
 print("\t * "+snow_dir+snow_prefix+ "<n>.tif: monthly snow cover factor (probability) ")
-print("\t * "+wind_speed_dir+wind_speed_prefix+ "<n>.tif: monthly average wind speed in m/s ")
+print("\t * "+wind_speed_dir+wind_speed_prefix+ "<n>.tif: daily average wind speed in m/s ")
 print("\t * "+fvc_dir+fvc_prefix+ "<n>.tif: monthly fractional vegetation coverage in % ")
 print("\t * "+sand_dir+sand_file_name+ " : non-temporal sand ratio (filename is a TIF file including extension) ")
 print("\t * "+silt_dir+silt_file_name+ " : non-temporal silt ratio (filename is a TIF file including extension) ")
 print("\t * "+clay_dir+clay_file_name+ " : non-temporal clay ratio (filename is a TIF file including extension) ")
 print("\t * "+som_dir+som_file_name+ " : non-temporal organic matter ratio, data expected to be percentage*100 (filename is a TIF file including extension) ")
-    
-#print('data_dir: ', data_dir)
-#print('input_data_dir: ', input_dir)
-#print('dem_file_name: ', dem_file_name)
-#print('temper_dir, temper_prefix', temper_dir, temper_prefix)
-#print('precip_dir, precip_prefix', precip_dir, precip_prefix)
-#print('sol_dir, sol_prefix', sol_dir, sol_prefix)
-#print('prcp_days_dir, prcp_days_prefix', prcp_days_dir, prcp_days_prefix)
-#print('snow_dir, snow_prefix', snow_dir, snow_prefix)
-#print('wind_speed_dir, wind_speed_prefix', wind_speed_dir, wind_speed_prefix)
-#print('sand_dir, sand_file_name', sand_dir, sand_file_name)
-#print('silt_dir, silt_file_name', silt_dir, silt_file_name)
-#print('clay_dir, clay_file_name', clay_dir, clay_file_name)
-#print('som_dir, som_file_name', som_dir, som_file_name)
-#print('fvc_dir, fvc_prefix', fvc_dir, fvc_prefix)
 
 print('########################')
 print("Creating all outputs in:", data_dir)
@@ -366,8 +338,8 @@ def snow_cover_file_path(month_num):
     snow_cover_filename = snow_prefix + month_num + '.tif'
     return os.path.join(snow_dir, snow_cover_filename)
 
-def wind_spd_file_path(month_num):
-    wind_speed_filename = wind_speed_prefix + month_num + '.tif'
+def wind_spd_file_path(day_num):
+    wind_speed_filename = wind_speed_prefix + day_num + '.tif'
     return os.path.join(wind_speed_dir, wind_speed_filename)
 
 def weather_factor_out_file_path(month_num):
@@ -434,6 +406,10 @@ def sl_fvc_50_out_file_path():
     sl_fvc_50_out_filename = 'SL_fvc_50.tif'
     return os.path.join(output_data_path, sl_fvc_50_out_filename)
 
+def sl_fvc_0_out_file_path():
+    sl_fvc_0_out_filename = 'SL_fvc_0.tif'
+    return os.path.join(output_data_path, sl_fvc_0_out_filename)
+
 def sl_fvc_10p_out_file_path():
     sl_fvc_10p_out_filename = 'SL_fvc_10p.tif'
     return os.path.join(output_data_path, sl_fvc_10p_out_filename)
@@ -453,11 +429,11 @@ HIST_BINS = 50
 Kr_WINDOW_SIZE = 3
 en_corr_plot = False
 en_hist_plot = False
-
+min_ind = -5.0
+max_ind = -10.0
 # days of month 1-12
 mondays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 endday = [30, 58, 89, 119, 150, 180, 211, 242, 272, 303, 333, 364]
-#month_id = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'] ## Isita, this variable is not used, is it normal?
 
 
 
@@ -480,7 +456,7 @@ def RasterSave(data, path, ref_file_path):
         --
     """
     ref_raster = gdal.Open(ref_file_path)
-    ndv = -9999
+    ndv = -9999.0
     driver = gdal.GetDriverByName('GTiff')
     ds = driver.Create(path, ref_raster.RasterXSize, ref_raster.RasterYSize, 1, gdal.GDT_Float32)
     ds.SetGeoTransform(ref_raster.GetGeoTransform())
@@ -535,7 +511,12 @@ def get_monthly_avg_temp(file_path):
     # monthly average temperature(℃)
     tem_m = read_raster_as_array(file_path)
     tem_m = (tem_m < -100) * 0.1 + (tem_m >= -100) * tem_m
-    tem_m = tem_m * temperature_factor
+    if temperature_factor == min_ind:
+        tem_m = temperature_min
+    elif temperature_factor == max_ind:
+        tem_m = temperature_max
+    else:
+        tem_m = tem_m * temperature_factor
     return tem_m
 
 def get_monthly_total_precip(file_path):
@@ -549,7 +530,12 @@ def get_monthly_total_precip(file_path):
     # monthly total precipitation(mm)
     prcp = read_raster_as_array(file_path) 
     prcp = (prcp < 0) * 0 + (prcp >= 0) * prcp
-    prcp = prcp * precip_factor
+    if precip_factor == min_ind:
+        prcp = precip_min
+    elif precip_factor == max_ind:
+        prcp = precip_max
+    else:
+        prcp = prcp * precip_factor
     return prcp
 
 def get_monthly_sol_rad(file_path):
@@ -564,7 +550,13 @@ def get_monthly_sol_rad(file_path):
     # monthly total solar radiation (MJ/m2)
     SOL = read_raster_as_array(file_path)
     SOL = (SOL < 0) * 0.1 + (SOL >= 0) * SOL
-    SOL = SOL * solar_rad_factor
+    
+    if solar_rad_factor == min_ind:
+        SOL = solar_rad_min
+    elif solar_rad_factor == max_ind:
+        SOL = solar_rad_max
+    else:
+        SOL = SOL * solar_rad_factor
     return SOL
 
 def get_monthly_num_rain_days(file_path):
@@ -579,6 +571,12 @@ def get_monthly_num_rain_days(file_path):
     # days of rain events in every month
     prcp_days = read_raster_as_array(file_path)
     prcp_days = (prcp_days < 0) * 0 + (prcp_days >= 0) * prcp_days
+    if prcp_days_factor == min_ind:
+        prcp_days = prcp_days_min
+    elif prcp_days_factor == max_ind:
+        prcp_days = prcp_days_max
+    else:
+        prcp_days = prcp_days* prcp_days_factor
     return prcp_days
 
 def calculate_evapotranspiration(solar_rad, avg_temp):
@@ -628,7 +626,12 @@ def calculate_snow_factor(file_path):
 
     SD = read_raster_as_array(file_path)
     SD = (SD < 0) * 0 + (SD >= 0) * SD
-    SD = SD * snow_cover_factor
+    if snow_cover_factor == min_ind:
+        SD = 0
+    elif snow_cover_factor == max_ind:
+        SD = 0
+    else:
+        SD = SD * snow_cover_factor
     SD = (1 - SD * 0.01)
     return SD
 
@@ -647,7 +650,7 @@ def calculate_air_density(temperature, air_pressure):
     air_density_rho = 1.293 * (273 / (273 + temperature)) * air_pressure / 101.3
     return air_density_rho
 
-def calculate_wind_factor_monthly(file_path):
+def calculate_wind_factor_monthly(month_id):
     """Calculate the wind factor for a given month
     Parameters:
         file_path: path to Raster file with monthly wind speed
@@ -656,19 +659,37 @@ def calculate_wind_factor_monthly(file_path):
         Wind Factor (wf)
         GDAL array
     """
+    if month_id == 0:
+        start_date = 0
+        end_date = int(endday[month_id]) + 1
+    else:
+        start_date = int(endday[month_id - 1]) + 1
+        end_date = int(endday[month_id]) + 1
+    
+    wf_sum = 0.0
+    counter = 0
+    for i in range(start_date, end_date):
      # daily wind speed (m/s)
-    wind_speed = read_raster_as_array(file_path) 
-    wind_speed = wind_speed * wind_speed_factor 
+        file_path = wind_spd_file_path(str(i+1))
+        wind_speed = read_raster_as_array(file_path)
+        wind_speed = np.absolute(wind_speed)
+        if wind_speed_factor == min_ind:
+            wind_speed = wind_speed_min
+        elif wind_speed_factor == max_ind:
+            wind_speed = wind_speed_max
+        else:
+            wind_speed = wind_speed * wind_speed_factor 
     
-    #Forcing wind speed to zero if it is less than the RWEQ threshold of 5m/s
-    wind_speed = (wind_speed < 5) * 0 + (wind_speed >= 5) * wind_speed
+        #Forcing wind speed to zero if it is less than the RWEQ threshold of 5m/s
+        wind_speed = (wind_speed < 5) * 0 + (wind_speed >= 5) * wind_speed
     
-    # wind factor
-    wf = wind_speed * (wind_speed - 5) ** 2
-    
-    return wf
+        # wind factor
+        wf = wind_speed * (wind_speed - 5) ** 2
+        wf_sum = wf_sum + wf
+        counter = counter + 1
+    return wf_sum
 
-def calculate_monthly_weather_factor(wind_file_path, temp, precip, sol_rad, precip_days, snow_factor, pressure):
+def calculate_monthly_weather_factor(wind_file_path, temp, precip, sol_rad, precip_days, snow_factor, pressure, month_id):
     """Calculate the Weather Factor for a given month
     Parameters:
         Wind Factor (wf)
@@ -688,7 +709,7 @@ def calculate_monthly_weather_factor(wind_file_path, temp, precip, sol_rad, prec
         GDAL array
     """
    
-    wind_factor =  calculate_wind_factor_monthly(wind_file_path)
+    wind_factor =  calculate_wind_factor_monthly(month_id)
 
     air_density_rho = calculate_air_density(temp, pressure)
     
@@ -755,7 +776,7 @@ def calculate_soil_erodibility_factor(sand_ratio, silt_ratio, clay_ratio, org_ma
 
 
     return soil_erode_factor
-def preprocess_veg_coverage(file_path):
+def preprocess_veg_coverage(file_path, fvc_fact):
     """Preprocess the Fraction of Monthly Vegetation Coverage For a Given Month
     Parameters:
         Fraction of Monthly Vegetation Coverage
@@ -767,8 +788,15 @@ def preprocess_veg_coverage(file_path):
     """
     fvc = read_raster_as_array(file_path)
     fvc = ((fvc < 0) | (fvc > 100)) * 0 + ((fvc >= 0) & (fvc <= 100)) * fvc
-    fvc = fvc*fvc_factor
-    return fvc
+    fvc1 = fvc
+    if fvc_fact == min_ind:
+        fvc1[np.invert(np.isnan(fvc))] = fvc_min
+    elif fvc_fact == max_ind:
+        fvc1[np.invert(np.isnan(fvc))] = fvc_max
+    else:
+        fvc1 = fvc
+
+    return fvc1
 
 def calculate_vegetation_factor(file_path, fvc_factor):
     """Calculate the Fraction of Monthly Vegetation Coverage For a Given Month
@@ -781,7 +809,7 @@ def calculate_vegetation_factor(file_path, fvc_factor):
         GDAL array
     """
     # read fraction of vegetation coverage data (%)
-    fvc = preprocess_veg_coverage(file_path)
+    fvc = preprocess_veg_coverage(file_path, fvc_factor)
     vegetation_factor = np.exp(-0.00483*fvc)
     
     return vegetation_factor
@@ -815,7 +843,6 @@ def window_delta(data_arr, window_size):
             # (rows, columns = data.shape !)
             temp_sum = matrix[y : window_rows + y,
                               x : window_cols + x]
-            #print(temp_sum.max(), temp_sum.min())
             deltas[y, x] = temp_sum.max() -  temp_sum.min()
               
     return deltas
@@ -835,17 +862,12 @@ def calculate_roughness_length(dem_file_path):
     geotransform = raster.GetGeoTransform()
     
     deltas = window_delta(dem_arr, Kr_WINDOW_SIZE)
-    #print(deltas)
-    #print_max_min(deltas, 'delats')
     #convert to kilometers
     deltas = deltas/1000
     resolution = (abs(geotransform[1]) + abs(geotransform[5]))/2
-    #print('res:',resolution)
     #convert to kilometers
     resolution = resolution/1000
     roughness_length = 0.2* ((deltas **2)/(resolution*(Kr_WINDOW_SIZE-1)))
-    #conversion to centimeters
-    #roughness_length *= 100
     return roughness_length
     
 def calculate_chain_rand_roughness(fvc_path, fvc_factor):
@@ -862,10 +884,16 @@ def calculate_chain_rand_roughness(fvc_path, fvc_factor):
         stored in array
     """
     fvc_a = read_raster_as_array(fvc_path)
-    fvc_a2 = ((fvc_a < 0) | (fvc_a > 100)) * 0 + ((fvc_a >= 0) & (fvc_a <= 100)) * fvc_a
-    fvc_a2=fvc_a2/100
-    fvc_a2 = fvc_a2 * fvc_factor
-    Crr = 17.46 * (0.025 + 2.464*fvc_a2**3.56)**0.738
+    fvc = ((fvc_a < 0) | (fvc_a > 100)) * 0 + ((fvc_a >= 0) & (fvc_a <= 100)) * fvc_a
+    
+    if fvc_factor == min_ind:
+        fvc = fvc_min
+    elif fvc_factor == max_ind:
+        fvc = fvc_max
+    else:
+        fvc = fvc*fvc_factor
+    fvc = fvc/100
+    Crr = 17.46 * (0.025 + 2.464*fvc**3.56)**0.738
     return Crr
     
     
@@ -947,7 +975,7 @@ def calculate_monthly_wind_erosion(weather_factor,soil_erode_factor, kprime, soi
     s = 105.71 * (weather_factor * soil_erode_factor * kprime * soil_crust_factor * cog)**-0.3711
     wind_erosion = 100/(s * s +0.01)*Qmax * (np.exp(-(50 / (s + 0.01)) ** 2))
     
-    #print('QMax', np.nanmean(Qmax), np.nansum(Qmax))
+
     
     return wind_erosion
 
@@ -979,11 +1007,7 @@ def corr_max_min(arr_x, arr_y, corr_min, corr_max, old_min_index, old_max_index,
 # # # # # # # # # # # # # # # # #
 
 master_name_list = ['wind_speed', 'temperature', 'precip', 'som', 'fvc', 'solar_rad', 'snow_cover', 'sand', 'silt', 'clay', 'primary']
-#scale_list = [0.50, 0.75, 0.90, 1.00, 1.10, 1.25, 1.50]
-#scale_list = [0.5, 1.00, 1.50]
-#scale_list = [0.50, 1.00]
 scale_list = [1.00]
-#factor_list = [0, 1, 2, 3, 4, 5 ,6 ,7 ,8, 9, 10]
 factor_list = [0]
 SL_sum_0p5_Exists = False
 SL_sum_1p5_Exists = False
@@ -994,11 +1018,11 @@ for factor_select in factor_list:
     SL_wo_veg_avg_arr = np.zeros(len(scale_list))
     SL_fvc_100_avg_arr = np.zeros(len(scale_list))
     SL_fvc_50_avg_arr = np.zeros(len(scale_list))
+    SL_fvc_0_avg_arr = np.zeros(len(scale_list))
     SL_fvc_10p_avg_arr = np.zeros(len(scale_list))
     SL_fvc_20p_avg_arr = np.zeros(len(scale_list))
     fact_ind = 0
     for scale_factor in scale_list:
-        #print('index(factor, scale)', master_name_list[factor_select], scale_factor)
         wind_speed_factor = 1.0
         temperature_factor = 1.0
         precip_factor = 1.0
@@ -1010,6 +1034,7 @@ for factor_select in factor_list:
         silt_factor = 1.0
         clay_factor = 1.0
         primary_factor = 1.0
+        prcp_days_factor = 1.0
         if(factor_select == 0):
             wind_speed_factor = scale_factor 
         if(factor_select == 1):
@@ -1031,9 +1056,13 @@ for factor_select in factor_list:
         if(factor_select == 9):
             clay_factor = scale_factor
         if(factor_select == 10):
-            primary_factor = scale_factor
+            if scale_factor == min_ind or scale_factor == max_ind:
+                primary_factor = 1.0
+            else:
+                primary_factor = scale_factor   
+        if(factor_select == 11):
+            prcp_days_factor = scale_factor
             
-        #print('fvc factor',fvc_factor)
         # Step 1 : Weather Factor
         # # # # # # # # # # # # #
 
@@ -1061,24 +1090,48 @@ for factor_select in factor_list:
 
             wind_speed_file_path = wind_spd_file_path(month_id_str) 
 
-            monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path, temp, precip, sol_rad, precip_days, snow_factor, pressure)
+            monthly_WF = calculate_monthly_weather_factor(wind_speed_file_path, temp, precip, sol_rad, precip_days, snow_factor, pressure, month_id)
             wf_out_file_path =  weather_factor_out_file_path(month_id_str)
             RasterSave(monthly_WF, wf_out_file_path, dem_file_path)
 
         # Step 2 : Soil Crusting Factor and Erodibility Factor 
         # # # # # # # # # # # # #
         sand_ratio = preprocess_soil_nonneg(sand_file_path)
-        sand_ratio = sand_ratio*100*sand_factor
+
+        if sand_factor == min_ind:
+            sand_ratio = sand_min
+        elif sand_factor == max_ind:
+            sand_ratio = sand_max
+        else:
+            sand_ratio = sand_ratio*sand_factor
+        sand_ratio = sand_ratio*100
 
         silt_ratio = preprocess_soil_nonneg(silt_file_path)
-        silt_ratio = silt_ratio*100*silt_factor
+        if silt_factor == min_ind:
+            silt_ratio = silt_min
+        elif silt_factor == max_ind:
+            silt_ratio = silt_max
+        else:
+            silt_ratio = silt_ratio*silt_factor
+        silt_ratio = silt_ratio*100
 
         org_mat_ratio = preprocess_soil_nonneg(org_mat_file_path)
+        if som_factor == min_ind:
+            org_mat_ratio = som_min
+        elif som_factor == max_ind:
+            org_mat_ratio = som_max
+        else:
+            org_mat_ratio = org_mat_ratio*som_factor
         org_mat_ratio = org_mat_ratio/1000
-        org_mat_ratio = org_mat_ratio*som_factor
 
         clay_ratio = preprocess_soil_nonneg(clay_file_path)
-        clay_ratio = clay_ratio*100*clay_factor
+        if clay_factor == min_ind:
+            clay_ratio = clay_min
+        elif clay_factor == max_ind:
+            clay_ratio = clay_max
+        else:
+            clay_ratio = clay_ratio*clay_factor 
+        clay_ratio = clay_ratio*100
 
         scf = calculate_soil_crust_factor(clay_ratio,org_mat_ratio)
         RasterSave(scf,scf_file_path,dem_file_path)
@@ -1094,9 +1147,9 @@ for factor_select in factor_list:
             fvc_file_path = frac_veg_cov_file_path(month_id_str)
 
             monthly_cog = calculate_vegetation_factor(fvc_file_path, 1.0)
+
             COG_out_file_path  = cog_out_file_path(month_id_str)
             RasterSave(monthly_cog, COG_out_file_path, fvc_file_path)
-
             monthly_kprime = calculate_surface_terr_rough(dem_file_path, fvc_file_path, 1.0)
             Kprime_out_file_path = kk_out_file_path(month_id_str)
             RasterSave(monthly_kprime, Kprime_out_file_path, fvc_file_path)
@@ -1117,6 +1170,7 @@ for factor_select in factor_list:
         SL_wo_veg_sum = 0.0
         SL_fvc_100 = 0.0
         SL_fvc_50 = 0.0
+        SL_fvc_0 = 0.0
         SL_fvc_10p = 0.0
         SL_fvc_20p  = 0.0
         
@@ -1138,8 +1192,8 @@ for factor_select in factor_list:
             fvc_file_path = frac_veg_cov_file_path(month_id_str)
             cog = calculate_vegetation_factor(fvc_file_path, fvc_factor)
             kprime = calculate_surface_terr_rough(dem_file_path, fvc_file_path, fvc_factor)
-            fvc_file_path = frac_veg_cov_file_path(month_id_str)
 
+            fvc_file_path = frac_veg_cov_file_path(month_id_str)
             cog_10p = calculate_vegetation_factor(fvc_file_path, 1.10)
             kprime_10p = calculate_surface_terr_rough(dem_file_path, fvc_file_path, fvc_factor)
 
@@ -1180,7 +1234,7 @@ for factor_select in factor_list:
             SL_fvc_20p += wind_erosion_fvc_20p
         
             fvc_file_path = frac_veg_cov_file_path(month_id_str)
-            fvc_arr = preprocess_veg_coverage(fvc_file_path)
+            fvc_arr = preprocess_veg_coverage(fvc_file_path, 1.0)
        
       
         if scale_factor == 0.5:
@@ -1211,28 +1265,4 @@ for factor_select in factor_list:
         SL_out_file_path = sl_actual_out_file_path() 
         RasterSave(SL_sum, SL_out_file_path, wf_file_path)
 
-#         SL_without_veg_out_file_path = sl_wo_veg_out_file_path()
-#         RasterSave(SL_wo_veg_sum, SL_without_veg_out_file_path, wf_file_path)
-        
-#         SL_precent_diff_out_file_path = sl_percent_diff_out_file_path()
-#         percent_diff = 100*(SL_wo_veg_sum-SL_sum)/SL_sum
-#         RasterSave(percent_diff, SL_precent_diff_out_file_path, wf_file_path)
-        
-#         SL_fvc_100_file_path = sl_fvc_100_out_file_path()
-#         RasterSave(SL_fvc_100, SL_fvc_100_file_path, wf_file_path)
-        
-#         SL_fvc_50_file_path = sl_fvc_50_out_file_path()
-#         RasterSave(SL_fvc_50, SL_fvc_50_file_path, wf_file_path)
-        
-#         SL_fvc_10p_file_path = sl_fvc_10p_out_file_path()
-#         RasterSave(SL_fvc_10p, SL_fvc_10p_file_path, wf_file_path)
-        
-#         SL_fvc_20p_file_path = sl_fvc_20p_out_file_path()
-#         RasterSave(SL_fvc_20p, SL_fvc_20p_file_path, wf_file_path)
-        
-#         sand_re = SL_wo_veg_sum - SL_sum
-#         sand_re = (sand_re < 0) * 0 + (sand_re >= 0) * sand_re
-
-#         sand_re_out_file_path = sand_r_out_file_path()
-#         RasterSave(sand_re, sand_re_out_file_path, dem_file_path)
 
